@@ -15,4 +15,8 @@ body {
 
 canvas {
   display: block;
+  width: min(100vw, calc(100vh * 16 / 9));
+  height: auto;
+  aspect-ratio: 16 / 9;
+  image-rendering: pixelated;
 }

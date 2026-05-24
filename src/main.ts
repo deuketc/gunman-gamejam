@@ -5,8 +5,8 @@ import { Game } from "./Game";
 async function main() {
   const app = new Application();
   await app.init({
-    width: 800,
-    height: 600,
+    width: 640,
+    height: 360,
     backgroundColor: 0x050510,
     antialias: true,
   });
@@ -14,12 +14,18 @@ async function main() {
   document.body.appendChild(app.canvas);
 
   await Assets.load([
-    '/assets/gunman-stand-left-right.png',
-    '/assets/gunman-ani-stand-shutgun-walk-left.png',
-    '/assets/gunman-ani-stand-shutgun-walk-right.png',
-    '/assets/gunman-ani-stand-shutgun-shoot-left.png',
-    '/assets/gunman-ani-stand-shutgun-shoot-right.png',
-    '/assets/gunman-ani-stand-shutgun-idle-front.png',
+    "/assets/background_01.png",
+    "/assets/gunman-stand-left-right.png",
+    "/assets/gunman-ani-stand-shutgun-walk-left.png",
+    "/assets/gunman-ani-stand-shutgun-walk-right.png",
+    "/assets/gunman-ani-stand-shutgun-shoot-left.png",
+    "/assets/gunman-ani-stand-shutgun-shoot-right.png",
+    "/assets/gunman-ani-stand-shutgun-idle-front.png",
+    "/assets/enemy-static-stand-facing-with-gun.png",
+    "/assets/enemy-ani-stand-facing-idle.png",
+    "/assets/enemy-ani-stand-facing-raise-gun.png",
+    "/assets/enemy-ani-stand-facing-idle-death-from-bullet.png",
+    "/assets/gunman-ani-stand-death-right.png",
   ]);
 
   const game = new Game(app);
