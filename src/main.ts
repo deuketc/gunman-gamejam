@@ -26,6 +26,8 @@ async function main() {
     "/assets/gunman-ani-stand-death-right.png",
     "/assets/gunman-ani-stand-shutgun-turn-around-right.png",
     "/assets/gunman-ani-stand-shutgun-jump-to-platform-right.png",
+    "/assets/gunman-ani-stand-shutgun-pull-up-to-platform-right.png",
+    "/assets/gunman-ani-fall-shutgun-right.png",
   ]);
 
   const game = new Game(app);
