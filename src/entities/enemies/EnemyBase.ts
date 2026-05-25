@@ -14,6 +14,6 @@ export interface EnemyBase {
   hit(): void;
   hitbox(): Rect;
   detectionZone(): Rect;
-  update(playerX: number, playerMoving: boolean): void;
+  update(playerX: number, playerY: number, playerMoving: boolean): void;
   takePendingShots(): PendingShot[];
 }

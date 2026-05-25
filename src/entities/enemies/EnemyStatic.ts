@@ -150,17 +150,19 @@ export class EnemyStatic implements EnemyBase {
   detectionZone(): Rect {
     return {
       x: this.container.x - FRAME_W - ALERT_DISTANCE,
-      y: this.container.y - FRAME_H * 2,
+      y: this.container.y - FRAME_H,
       w: ALERT_DISTANCE,
-      h: FRAME_H * 2,
+      h: FRAME_H,
     };
   }
 
-  update(playerX: number, playerMoving: boolean) {
+  update(playerX: number, playerY: number, playerMoving: boolean) {
     if (this.state === "dying") return;
 
     const dz = this.detectionZone();
-    const inRange = playerX >= dz.x && playerX <= dz.x + dz.w;
+    const inRange =
+      playerX >= dz.x && playerX <= dz.x + dz.w &&
+      playerY >= dz.y && playerY <= dz.y + dz.h;
 
     if (this.shootPauseTimer > 0) {
       this.shootPauseTimer--;

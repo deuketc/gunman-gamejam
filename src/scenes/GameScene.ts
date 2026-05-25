@@ -72,7 +72,7 @@ export class GameScene {
     this.lastPlayerX = playerX;
 
     // Update enemies (skip dead — they stay in the scene but do nothing)
-    for (const e of this.enemies) if (!e.dead) e.update(playerX, playerMoving);
+    for (const e of this.enemies) if (!e.dead) e.update(playerX, playerY, playerMoving);
 
     // Collect enemy shots
     for (const e of this.enemies)
@@ -158,6 +158,12 @@ export class GameScene {
           .rect(phb.x, phb.y, phb.w, phb.h)
           .fill({ color: 0x00ffff, alpha: 0.15 })
           .stroke({ color: 0x00ffff, width: 1 });
+        // Player detection zone — magenta
+        const pdz = this.player.detectionZone();
+        this.debugGfx
+          .rect(pdz.x, pdz.y, pdz.w, pdz.h)
+          .fill({ color: 0xff00ff, alpha: 0.1 })
+          .stroke({ color: 0xff00ff, width: 1 });
       }
       // Player position crosshair
       this.debugGfx

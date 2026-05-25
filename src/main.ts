@@ -16,16 +16,16 @@ async function main() {
   await Assets.load([
     "/assets/background_01.png",
     "/assets/gunman-stand-left-right.png",
-    "/assets/gunman-ani-stand-shutgun-walk-left.png",
     "/assets/gunman-ani-stand-shutgun-walk-right.png",
-    "/assets/gunman-ani-stand-shutgun-shoot-left.png",
     "/assets/gunman-ani-stand-shutgun-shoot-right.png",
-    "/assets/gunman-ani-stand-shutgun-idle-front.png",
+    "/assets/gunman-ani-stand-shutgun-idle-right.png",
     "/assets/enemy-static-stand-facing-with-gun.png",
     "/assets/enemy-ani-stand-facing-idle.png",
     "/assets/enemy-ani-stand-facing-raise-gun.png",
     "/assets/enemy-ani-stand-facing-idle-death-from-bullet.png",
     "/assets/gunman-ani-stand-death-right.png",
+    "/assets/gunman-ani-stand-shutgun-turn-around-right.png",
+    "/assets/gunman-ani-stand-shutgun-jump-to-platform-right.png",
   ]);
 
   const game = new Game(app);

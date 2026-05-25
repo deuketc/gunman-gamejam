@@ -15,7 +15,17 @@ type PlayerState =
   | "shoot-ready-left"
   | "shoot-ready-right"
   | "shoot-lower-left"
-  | "shoot-lower-right";
+  | "shoot-lower-right"
+  | "turn-right"
+  | "turn-right-back"
+  | "turn-left"
+  | "turn-left-back"
+  | "platform-jump-right"
+  | "platform-jump-left"
+  | "platform-jump-hang-right"
+  | "platform-jump-hang-left"
+  | "platform-jump-land-right"
+  | "platform-jump-land-left";
 
 interface PendingBullet {
   x: number;
@@ -28,13 +38,23 @@ const DEATH_FRAME_W = 128;
 const DEATH_FRAME_H = 128;
 const DEATH_FRAME_COUNT = 15;
 const STAND_PATH = "/assets/gunman-stand-left-right.png";
-const WALK_L_PATH = "/assets/gunman-ani-stand-shutgun-walk-left.png";
 const WALK_R_PATH = "/assets/gunman-ani-stand-shutgun-walk-right.png";
-const SHOOT_L_PATH = "/assets/gunman-ani-stand-shutgun-shoot-left.png";
 const SHOOT_R_PATH = "/assets/gunman-ani-stand-shutgun-shoot-right.png";
-const IDLE_FRONT_PATH = "/assets/gunman-ani-stand-shutgun-idle-front.png";
-const IDLE_FRONT_FRAMES = 10;
-const IDLE_TRIGGER_FRAMES = 300; // ~5 seconds at 60 fps
+const IDLE_FRONT_PATH = "/assets/gunman-ani-stand-shutgun-idle-right.png";
+const TURN_R_PATH = "/assets/gunman-ani-stand-shutgun-turn-around-right.png";
+const TURN_FRAME_COUNT = 3;
+const TURN_ANIM_SPEED = 0.2;
+const PLATFORM_JUMP_PATH = "/assets/gunman-ani-stand-shutgun-jump-to-platform-right.png";
+const PLATFORM_JUMP_FRAME_W = 128;
+const PLATFORM_JUMP_FRAME_H = 128;
+const PLATFORM_JUMP_FRAMES = 9;
+const PLATFORM_JUMP_LAUNCH_FRAME = 6; // 0-indexed: physics fire here
+const PLATFORM_JUMP_STARTUP_COUNT = 6; // frames 0-5 play while grounded
+const PLATFORM_JUMP_ANIM_SPEED = 0.2;
+const PLATFORM_JUMP_STRENGTH = 8; // slightly lower than normal jump (JUMP_STRENGTH = 9)
+const PLATFORM_JUMP_Y_OFFSET = 32; // shift 128px frame down to align feet with ground
+const IDLE_FRONT_FRAMES = 17;
+const IDLE_TRIGGER_FRAMES = 240; // 4 seconds at 60 fps
 const IDLE_ANIM_SPEED = 0.1; // relaxed pace
 const FRAME_W = 64;
 const FRAME_H = 64;
@@ -105,52 +125,47 @@ export class Player {
     );
 
     const stand = Assets.get<Texture>(STAND_PATH);
-    const wL = Assets.get<Texture>(WALK_L_PATH);
     const wR = Assets.get<Texture>(WALK_R_PATH);
-    const sL = Assets.get<Texture>(SHOOT_L_PATH);
     const sR = Assets.get<Texture>(SHOOT_R_PATH);
     const idleF = Assets.get<Texture>(IDLE_FRONT_PATH);
+    const turnR = Assets.get<Texture>(TURN_R_PATH);
+    const pjR = Assets.get<Texture>(PLATFORM_JUMP_PATH);
 
     const standR = new Texture({
       source: stand.source,
       frame: new Rectangle(0, 0, FRAME_W, FRAME_H),
-    });
-    const standL = new Texture({
-      source: stand.source,
-      frame: new Rectangle(FRAME_W, 0, FRAME_W, FRAME_H),
     });
     // Ready frame = frame 0 of the shoot sheet (gun fully raised, waiting to fire)
     const readyR = new Texture({
       source: sR.source,
       frame: new Rectangle(0, 0, FRAME_W, FRAME_H),
     });
-    const readyL = new Texture({
-      source: sL.source,
-      frame: new Rectangle(0, 0, FRAME_W, FRAME_H),
-    });
 
+    // Left states reuse right-facing textures — the sprite is flipped via scale.x = -1
     this.textures = {
       "idle-right": [standR],
-      "idle-left": [standL],
+      "idle-left": [standR],
       "idle-front": cropFrames(idleF, 0, IDLE_FRONT_FRAMES),
       "walk-right": cropFrames(wR, 0, WALK_FRAMES),
-      "walk-left": cropFrames(wL, 0, WALK_FRAMES),
+      "walk-left": cropFrames(wR, 0, WALK_FRAMES),
       "jump-right": [standR],
-      "jump-left": [standL],
+      "jump-left": [standR],
       "shoot-cycle-right": cropFrames(sR, 0, SHOOT_CYCLE_FRAMES),
-      "shoot-cycle-left": cropFrames(sL, 0, SHOOT_CYCLE_FRAMES),
+      "shoot-cycle-left": cropFrames(sR, 0, SHOOT_CYCLE_FRAMES),
       "shoot-ready-right": [readyR],
-      "shoot-ready-left": [readyL],
-      "shoot-lower-right": cropFrames(
-        sR,
-        SHOOT_CYCLE_FRAMES,
-        SHOOT_LOWER_FRAMES,
-      ),
-      "shoot-lower-left": cropFrames(
-        sL,
-        SHOOT_CYCLE_FRAMES,
-        SHOOT_LOWER_FRAMES,
-      ),
+      "shoot-ready-left": [readyR],
+      "shoot-lower-right": cropFrames(sR, SHOOT_CYCLE_FRAMES, SHOOT_LOWER_FRAMES),
+      "shoot-lower-left": cropFrames(sR, SHOOT_CYCLE_FRAMES, SHOOT_LOWER_FRAMES),
+      "turn-right": cropFrames(turnR, 0, TURN_FRAME_COUNT),
+      "turn-right-back": [...cropFrames(turnR, 0, TURN_FRAME_COUNT)].reverse(),
+      "turn-left": cropFrames(turnR, 0, TURN_FRAME_COUNT),
+      "turn-left-back": [...cropFrames(turnR, 0, TURN_FRAME_COUNT)].reverse(),
+      "platform-jump-right": cropFrames(pjR, 0, PLATFORM_JUMP_FRAMES, PLATFORM_JUMP_FRAME_W, PLATFORM_JUMP_FRAME_H),
+      "platform-jump-left":  cropFrames(pjR, 0, PLATFORM_JUMP_FRAMES, PLATFORM_JUMP_FRAME_W, PLATFORM_JUMP_FRAME_H),
+      "platform-jump-hang-right": cropFrames(pjR, 0, PLATFORM_JUMP_FRAMES, PLATFORM_JUMP_FRAME_W, PLATFORM_JUMP_FRAME_H),
+      "platform-jump-hang-left":  cropFrames(pjR, 0, PLATFORM_JUMP_FRAMES, PLATFORM_JUMP_FRAME_W, PLATFORM_JUMP_FRAME_H),
+      "platform-jump-land-right": [...cropFrames(pjR, 0, PLATFORM_JUMP_STARTUP_COUNT, PLATFORM_JUMP_FRAME_W, PLATFORM_JUMP_FRAME_H)].reverse(),
+      "platform-jump-land-left":  [...cropFrames(pjR, 0, PLATFORM_JUMP_STARTUP_COUNT, PLATFORM_JUMP_FRAME_W, PLATFORM_JUMP_FRAME_H)].reverse(),
     };
 
     this.sprite = new AnimatedSprite(this.textures["idle-front"]);
@@ -168,6 +183,16 @@ export class Player {
           this.state === "shoot-cycle-right")
       ) {
         this.spawnPellets();
+      }
+      // Platform jump: physics launch at frame 6 while animation keeps playing
+      if (
+        frame === PLATFORM_JUMP_LAUNCH_FRAME &&
+        (this.state === "platform-jump-right" ||
+          this.state === "platform-jump-left")
+      ) {
+        this.isGrounded = false;
+        this.velocityY = -PLATFORM_JUMP_STRENGTH;
+        this.velocityX = 0;
       }
     };
 
@@ -188,6 +213,18 @@ export class Player {
         case "shoot-lower-right":
           this.setState("idle-right");
           break;
+        case "turn-right-back":
+          this.setState("idle-right");
+          break;
+        case "turn-left-back":
+          this.setState("idle-left");
+          break;
+        case "platform-jump-land-right":
+          this.setState("idle-right");
+          break;
+        case "platform-jump-land-left":
+          this.setState("idle-left");
+          break;
       }
     };
 
@@ -200,6 +237,8 @@ export class Player {
     this.state = next;
     this.sprite.stop();
     this.sprite.textures = this.textures[next];
+    this.sprite.scale.x = next.includes("-left") || (next === "idle-front" && this.lastFacingLeft) ? -1 : 1;
+    this.sprite.position.set(0, 0); // reset frame offset; platform-jump overrides below
 
     if (
       next === "walk-left" ||
@@ -221,6 +260,25 @@ export class Player {
       this.sprite.loop = false;
       this.sprite.currentFrame = 0;
       this.sprite.play();
+    } else if (next === "turn-right" || next === "turn-right-back" || next === "turn-left" || next === "turn-left-back") {
+      this.sprite.animationSpeed = TURN_ANIM_SPEED;
+      this.sprite.loop = false;
+      this.sprite.currentFrame = 0;
+      this.sprite.play();
+    } else if (
+      next === "platform-jump-right" || next === "platform-jump-left" ||
+      next === "platform-jump-land-right" || next === "platform-jump-land-left"
+    ) {
+      this.sprite.position.set(0, PLATFORM_JUMP_Y_OFFSET);
+      this.sprite.animationSpeed = PLATFORM_JUMP_ANIM_SPEED;
+      this.sprite.loop = false;
+      this.sprite.currentFrame = 0;
+      this.sprite.play();
+    } else if (next === "platform-jump-hang-right" || next === "platform-jump-hang-left") {
+      this.sprite.position.set(0, PLATFORM_JUMP_Y_OFFSET);
+      this.sprite.loop = false;
+      this.sprite.currentFrame = PLATFORM_JUMP_FRAMES - 1; // frozen at last frame
+      // don't call play() — sprite stays still
     }
     // idle, jump, shoot-ready: stopped at frame 0
   }
@@ -230,6 +288,7 @@ export class Player {
     this.dead = true;
     this.velocityX = 0;
     this.velocityY = 0;
+    this.sprite.scale.x = 1;
     this.sprite.onComplete = undefined;
     this.sprite.textures = this.deathFrames;
     this.sprite.position.set(0, 32); // shift down so centred frame sits at ground level
@@ -245,6 +304,18 @@ export class Player {
       return { x: cx - 10, y: cy - 52, w: 20, h: 52 };
     }
     return { x: cx - 12, y: cy - 58, w: 24, h: 58 };
+  }
+
+  detectionZone(): Rect {
+    const cx = this.container.x;
+    const cy = this.container.y;
+    const platformJumping = this.state === "platform-jump-right" || this.state === "platform-jump-left"
+      || this.state === "platform-jump-hang-right" || this.state === "platform-jump-hang-left";
+    const yShift = platformJumping ? -15 : 0;
+    if (!this.isGrounded) {
+      return { x: cx - 10, y: cy - 52 + yShift, w: 20, h: 52 };
+    }
+    return { x: cx - 12, y: cy - 58 + yShift, w: 24, h: 58 };
   }
 
   setPlatforms(platforms: Platform[]) {
@@ -276,6 +347,27 @@ export class Player {
     this.pendingBullets.push({ x: barrelX, y: barrelY, angle: base });
   }
 
+  // Starts the reverse-turn animation from the position matching where forward got to.
+  // Drop from a platform hang — reverts to the airborne jump state so landing triggers the land animation.
+  private startHangDrop() {
+    this.state = this.state === "platform-jump-hang-left" ? "platform-jump-left" : "platform-jump-right";
+    this.velocityY = 2; // nudge downward so physics take over
+  }
+
+  private startTurnBack() {
+    const fwdFrame = this.sprite.currentFrame;
+    const backStart = Math.max(0, TURN_FRAME_COUNT - 1 - fwdFrame);
+    const backState: PlayerState = this.state === "turn-left" ? "turn-left-back" : "turn-right-back";
+    this.state = backState;
+    this.sprite.stop();
+    this.sprite.textures = this.textures[backState];
+    this.sprite.scale.x = backState.includes("-left") ? -1 : 1;
+    this.sprite.animationSpeed = TURN_ANIM_SPEED;
+    this.sprite.loop = false;
+    this.sprite.currentFrame = backStart;
+    this.sprite.play();
+  }
+
   takePendingBullets(): PendingBullet[] {
     const out = this.pendingBullets.slice();
     this.pendingBullets = [];
@@ -286,13 +378,20 @@ export class Player {
     if (this.dead) return;
     const left = Input.isAnyDown("ArrowLeft", "KeyA");
     const right = Input.isAnyDown("ArrowRight", "KeyD");
-    const jump = Input.isAnyDown("Space", "ArrowUp", "KeyW");
+    const jump = Input.isDown("Space");
+    const turnKey = Input.isAnyDown("ArrowUp", "KeyW");
     const shootDown = Input.isAnyDown("ControlLeft", "ControlRight");
     const shootJust = shootDown && !this.shootWasDown;
     this.shootWasDown = shootDown;
 
     // --- AIRBORNE ---
     if (!this.isGrounded) {
+      // --- HANGING: frozen on platform underside, waiting for Down ---
+      if (this.state === "platform-jump-hang-right" || this.state === "platform-jump-hang-left") {
+        if (Input.isAnyDown("ArrowDown", "KeyS")) this.startHangDrop();
+        return;
+      }
+
       this.velocityY += GRAVITY;
       this.container.x = Math.max(
         FRAME_W / 2,
@@ -300,13 +399,42 @@ export class Player {
       );
       const prevY = this.container.y;
       this.container.y += this.velocityY;
+
+      // --- Platform grab: detection zone top crosses a platform while jumping upward ---
+      if (
+        (this.state === "platform-jump-right" || this.state === "platform-jump-left") &&
+        this.velocityY < 0
+      ) {
+        // Detection zone top for platform-jump airborne = container.y - 52 - 15
+        const dzTop = this.container.y - 67;
+        const prevDzTop = prevY - 67;
+        const dz = this.detectionZone();
+        for (const p of this.platforms) {
+          const xOverlap = dz.x < p.x + p.w && dz.x + dz.w > p.x;
+          const crossed = dzTop <= p.y && prevDzTop > p.y;
+          if (xOverlap && crossed) {
+            this.container.y = p.y + 67; // snap so detection zone top sits at platform surface
+            this.velocityX = 0;
+            this.velocityY = 0;
+            this.setState(this.state === "platform-jump-left" ? "platform-jump-hang-left" : "platform-jump-hang-right");
+            return;
+          }
+        }
+      }
+
       const floor = this.effectiveFloor(this.container.x, prevY);
       if (this.container.y >= floor) {
         this.container.y = floor;
         this.velocityX = 0;
         this.velocityY = 0;
         this.isGrounded = true;
-        this.setState(this.facingLeft() ? "idle-left" : "idle-right");
+        if (this.state === "platform-jump-right") {
+          this.setState("platform-jump-land-right");
+        } else if (this.state === "platform-jump-left") {
+          this.setState("platform-jump-land-left");
+        } else {
+          this.setState(this.facingLeft() ? "idle-left" : "idle-right");
+        }
       }
       return;
     }
@@ -325,7 +453,7 @@ export class Player {
 
     // --- IDLE FRONT: any input exits back to last facing direction ---
     if (this.state === "idle-front") {
-      if (!left && !right && !jump && !shootJust) return;
+      if (!left && !right && !jump && !turnKey && !shootJust) return;
       this.idleTimer = 0;
       this.setState(this.lastFacingLeft ? "idle-left" : "idle-right");
       // fall through so the input is handled this frame
@@ -337,6 +465,18 @@ export class Player {
       this.state === "shoot-cycle-right" ||
       this.state === "shoot-lower-left" ||
       this.state === "shoot-lower-right"
+    ) {
+      return;
+    }
+
+    // --- PLATFORM JUMP / HANG / LAND: locked until animation completes ---
+    if (
+      this.state === "platform-jump-right" ||
+      this.state === "platform-jump-left" ||
+      this.state === "platform-jump-hang-right" ||
+      this.state === "platform-jump-hang-left" ||
+      this.state === "platform-jump-land-right" ||
+      this.state === "platform-jump-land-left"
     ) {
       return;
     }
@@ -361,12 +501,32 @@ export class Player {
         return;
       }
 
-      if (!left && !right && !jump) return;
-      // Movement key pressed — drop the gun immediately and fall through
+      if (!left && !right && !jump && !turnKey) return;
+      // Movement or turn key pressed — drop the gun immediately and fall through
       this.setState(isLeft ? "idle-left" : "idle-right");
     }
 
-    // --- GROUNDED: jump, new shot, or walk ---
+    // --- TURN FORWARD: playing forward, paused while key held ---
+    if (this.state === "turn-right" || this.state === "turn-left") {
+      if (jump) {
+        this.setState(this.state === "turn-left" ? "platform-jump-left" : "platform-jump-right");
+        return;
+      }
+      if (!turnKey) this.startTurnBack();
+      return;
+    }
+
+    // --- TURN BACK: animation drives itself; onComplete → idle ---
+    if (this.state === "turn-right-back" || this.state === "turn-left-back") {
+      return;
+    }
+
+    // --- GROUNDED: turn, jump, new shot, or walk ---
+    if (turnKey && !left && !right) {
+      this.setState(this.facingLeft() ? "turn-left" : "turn-right");
+      return;
+    }
+
     if (jump) {
       if (left && !right) {
         this.pendingJumpVX = -JUMP_SPEED_X;
