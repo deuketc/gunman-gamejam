@@ -20,6 +20,7 @@ async function main() {
     "/assets/gunman-ani-stand-shutgun-shoot-right.png",
     "/assets/gunman-ani-stand-shutgun-idle-right.png",
     "/assets/enemy-static-stand-facing-with-gun.png",
+    "/assets/enemy-ani-walk-with-gun-left.png",
     "/assets/enemy-ani-stand-facing-idle.png",
     "/assets/enemy-ani-stand-facing-raise-gun.png",
     "/assets/enemy-ani-stand-facing-idle-death-from-bullet.png",
@@ -28,6 +29,7 @@ async function main() {
     "/assets/gunman-ani-stand-shutgun-jump-to-platform-right.png",
     "/assets/gunman-ani-stand-shutgun-pull-up-to-platform-right.png",
     "/assets/gunman-ani-fall-shutgun-right.png",
+    "/assets/gunman-ani-right-jump-long.png",
   ]);
 
   const game = new Game(app);

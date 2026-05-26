@@ -39,7 +39,7 @@ export class GameScene {
     ground.moveTo(0, groundY).lineTo(this.screenW, groundY);
     this.container.addChild(ground);
 
-    const enemy = new EnemyStatic(this.screenW - 20, groundY);
+    const enemy = new EnemyStatic(this.screenW - 50, groundY);
     this.enemies.push(enemy);
     this.container.addChild(enemy.container);
 
@@ -72,13 +72,14 @@ export class GameScene {
     this.lastPlayerX = playerX;
 
     // Update enemies (skip dead — they stay in the scene but do nothing)
-    for (const e of this.enemies) if (!e.dead) e.update(playerX, playerY, playerMoving);
+    for (const e of this.enemies)
+      if (!e.dead) e.update(playerX, playerY, playerMoving);
 
     // Collect enemy shots
     for (const e of this.enemies)
       if (!e.dead) {
         for (const s of e.takePendingShots()) {
-          const laser = new EnemyLaser(s.x, s.y);
+          const laser = new EnemyLaser(s.x, s.y, s.vx);
           this.lasers.push(laser);
           this.container.addChild(laser.container);
         }
@@ -115,7 +116,10 @@ export class GameScene {
     // Enemy lasers — move then check vs player hurtbox
     for (const l of this.lasers) l.update(this.screenW, this.screenH);
     this.lasers = this.lasers.filter((l) => {
-      if (l.dead) { this.container.removeChild(l.container); return false; }
+      if (l.dead) {
+        this.container.removeChild(l.container);
+        return false;
+      }
       if (!this.player.dead) {
         const hb = this.player.hurtbox();
         if (pointInRect(l.container.x, l.container.y, hb)) {

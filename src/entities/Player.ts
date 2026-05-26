@@ -10,6 +10,8 @@ type PlayerState =
   | "walk-right"
   | "jump-left"
   | "jump-right"
+  | "jump-land-left"
+  | "jump-land-right"
   | "shoot-cycle-left"
   | "shoot-cycle-right"
   | "shoot-ready-left"
@@ -58,7 +60,7 @@ const PLATFORM_JUMP_FRAMES = 9;
 const PLATFORM_JUMP_LAUNCH_FRAME = 6; // 0-indexed: physics fire here
 const PLATFORM_JUMP_STARTUP_COUNT = 6; // frames 0-5 play while grounded
 const PLATFORM_JUMP_ANIM_SPEED = 0.2;
-const PLATFORM_JUMP_STRENGTH = 8; // slightly lower than normal jump (JUMP_STRENGTH = 9)
+const PLATFORM_JUMP_STRENGTH = 8; // slightly lower than normal jump
 const PLATFORM_JUMP_Y_OFFSET = 32; // shift 128px frame down to align feet with ground
 const PULL_UP_PATH =
   "/assets/gunman-ani-stand-shutgun-pull-up-to-platform-right.png";
@@ -70,10 +72,24 @@ const PULL_UP_Y_OFFSET = 13; // centres 160px frame on platform ledge (80 - hang
 const FALL_PATH = "/assets/gunman-ani-fall-shutgun-right.png";
 const FALL_FRAME_W = 128;
 const FALL_FRAME_H = 128;
-const FALL_INTRO_FRAMES = 3;  // frames 0-2: play then freeze while falling
-const FALL_LAND_FRAMES = 4;   // frames 3-6: play on ground contact
+const FALL_INTRO_FRAMES = 3; // frames 0-2: play then freeze while falling
+const FALL_LAND_FRAMES = 4; // frames 3-6: play on ground contact
 const FALL_ANIM_SPEED = 0.25;
-const FALL_Y_OFFSET = 32;     // same standard offset as other 128px sprites
+const FALL_Y_OFFSET = 32; // same standard offset as other 128px sprites
+
+// Long jump (left / right jump with run-up animation)
+const LONG_JUMP_PATH = "/assets/gunman-ani-right-jump-long.png";
+const LONG_JUMP_FRAME_W = 128;
+const LONG_JUMP_FRAME_H = 128;
+const LONG_JUMP_LAUNCH_FRAME = 2; // frame index when physics fires (after 2 startup frames)
+const LONG_JUMP_AIR_END = 8; // frames 0–7 played during startup + air phase
+const LONG_JUMP_LAND_START = 8; // frames 8–10: cooldown on landing
+const LONG_JUMP_LAND_FRAMES = 3;
+const LONG_JUMP_ANIM_SPEED = 0.2;
+const LONG_JUMP_Y_OFFSET = 32; // standard 128px offset
+const LONG_JUMP_STRENGTH = 5; // slightly less height than platform jump
+const LONG_JUMP_SPEED_X = 3; // more horizontal range than old jump (was 2)
+
 const IDLE_FRONT_FRAMES = 17;
 const IDLE_TRIGGER_FRAMES = 240; // 4 seconds at 60 fps
 const IDLE_ANIM_SPEED = 0.1; // relaxed pace
@@ -84,12 +100,9 @@ const SHOOT_CYCLE_FRAMES = 6; // frames 1–6  (0-indexed: 0–5)
 const SHOOT_LOWER_FRAMES = 4; // frames 7–10 (0-indexed: 6–9)
 const SHOOT_FIRE_FRAME = 3; // 0-indexed = frame 4 (1-indexed) — bullet spawns here
 const MOVE_SPEED = 1;
-const JUMP_SPEED_X = 2;
-const JUMP_STRENGTH = 9;
-const GRAVITY = 0.5;
+const GRAVITY = 0.3;
 const WALK_ANIM_SPEED = 0.18;
 const SHOOT_ANIM_SPEED = 0.25;
-const PRE_JUMP_FRAMES = 6;
 const SHOOT_HOLD_FRAMES = 90; // idle frames before gun auto-lowers
 
 function cropFrames(
@@ -122,9 +135,7 @@ export class Player {
   private velocityX = 0;
   private velocityY = 0;
   private isGrounded = true;
-  private preJumpTimer = 0;
   private pendingJumpVX = 0;
-  private pendingJumpState: "jump-left" | "jump-right" = "jump-right";
   private shootWasDown = false;
   private shootHoldTimer = 0;
   private pendingBullets: PendingBullet[] = [];
@@ -154,6 +165,7 @@ export class Player {
     const pjR = Assets.get<Texture>(PLATFORM_JUMP_PATH);
     const puR = Assets.get<Texture>(PULL_UP_PATH);
     const fallR = Assets.get<Texture>(FALL_PATH);
+    const ljR = Assets.get<Texture>(LONG_JUMP_PATH);
 
     const standR = new Texture({
       source: stand.source,
@@ -172,8 +184,36 @@ export class Player {
       "idle-front": cropFrames(idleF, 0, IDLE_FRONT_FRAMES),
       "walk-right": cropFrames(wR, 0, WALK_FRAMES),
       "walk-left": cropFrames(wR, 0, WALK_FRAMES),
-      "jump-right": [standR],
-      "jump-left": [standR],
+      // Long jump: frames 0–7 cover startup (0–1) + air (2–7)
+      "jump-right": cropFrames(
+        ljR,
+        0,
+        LONG_JUMP_AIR_END,
+        LONG_JUMP_FRAME_W,
+        LONG_JUMP_FRAME_H,
+      ),
+      "jump-left": cropFrames(
+        ljR,
+        0,
+        LONG_JUMP_AIR_END,
+        LONG_JUMP_FRAME_W,
+        LONG_JUMP_FRAME_H,
+      ),
+      // Landing cooldown: frames 8–10
+      "jump-land-right": cropFrames(
+        ljR,
+        LONG_JUMP_LAND_START,
+        LONG_JUMP_LAND_FRAMES,
+        LONG_JUMP_FRAME_W,
+        LONG_JUMP_FRAME_H,
+      ),
+      "jump-land-left": cropFrames(
+        ljR,
+        LONG_JUMP_LAND_START,
+        LONG_JUMP_LAND_FRAMES,
+        LONG_JUMP_FRAME_W,
+        LONG_JUMP_FRAME_H,
+      ),
       "shoot-cycle-right": cropFrames(sR, 0, SHOOT_CYCLE_FRAMES),
       "shoot-cycle-left": cropFrames(sR, 0, SHOOT_CYCLE_FRAMES),
       "shoot-ready-right": [readyR],
@@ -252,10 +292,34 @@ export class Player {
         PULL_UP_FRAME_W,
         PULL_UP_FRAME_H,
       ),
-      "fall-right": cropFrames(fallR, 0, FALL_INTRO_FRAMES, FALL_FRAME_W, FALL_FRAME_H),
-      "fall-left":  cropFrames(fallR, 0, FALL_INTRO_FRAMES, FALL_FRAME_W, FALL_FRAME_H),
-      "fall-land-right": cropFrames(fallR, FALL_INTRO_FRAMES, FALL_LAND_FRAMES, FALL_FRAME_W, FALL_FRAME_H),
-      "fall-land-left":  cropFrames(fallR, FALL_INTRO_FRAMES, FALL_LAND_FRAMES, FALL_FRAME_W, FALL_FRAME_H),
+      "fall-right": cropFrames(
+        fallR,
+        0,
+        FALL_INTRO_FRAMES,
+        FALL_FRAME_W,
+        FALL_FRAME_H,
+      ),
+      "fall-left": cropFrames(
+        fallR,
+        0,
+        FALL_INTRO_FRAMES,
+        FALL_FRAME_W,
+        FALL_FRAME_H,
+      ),
+      "fall-land-right": cropFrames(
+        fallR,
+        FALL_INTRO_FRAMES,
+        FALL_LAND_FRAMES,
+        FALL_FRAME_W,
+        FALL_FRAME_H,
+      ),
+      "fall-land-left": cropFrames(
+        fallR,
+        FALL_INTRO_FRAMES,
+        FALL_LAND_FRAMES,
+        FALL_FRAME_W,
+        FALL_FRAME_H,
+      ),
     };
 
     this.sprite = new AnimatedSprite(this.textures["idle-front"]);
@@ -274,6 +338,7 @@ export class Player {
       ) {
         this.spawnPellets();
       }
+
       // Platform jump: physics launch at frame 6 while animation keeps playing
       if (
         frame === PLATFORM_JUMP_LAUNCH_FRAME &&
@@ -283,6 +348,17 @@ export class Player {
         this.isGrounded = false;
         this.velocityY = -PLATFORM_JUMP_STRENGTH;
         this.velocityX = 0;
+      }
+
+      // Long jump: physics launch at frame 2 (after 2-frame windup on ground)
+      if (
+        frame === LONG_JUMP_LAUNCH_FRAME &&
+        (this.state === "jump-right" || this.state === "jump-left") &&
+        this.isGrounded
+      ) {
+        this.isGrounded = false;
+        this.velocityY = -LONG_JUMP_STRENGTH;
+        this.velocityX = this.pendingJumpVX;
       }
     };
 
@@ -313,6 +389,12 @@ export class Player {
           this.setState("idle-right");
           break;
         case "platform-jump-land-left":
+          this.setState("idle-left");
+          break;
+        case "jump-land-right":
+          this.setState("idle-right");
+          break;
+        case "jump-land-left":
           this.setState("idle-left");
           break;
         case "fall-land-right":
@@ -347,7 +429,7 @@ export class Player {
       next.includes("-left") || (next === "idle-front" && this.lastFacingLeft)
         ? -1
         : 1;
-    this.sprite.position.set(0, 0); // reset frame offset; platform-jump overrides below
+    this.sprite.position.set(0, 0); // reset frame offset; overridden below for 128px sprites
 
     if (
       next === "walk-left" ||
@@ -408,16 +490,29 @@ export class Player {
       this.sprite.currentFrame = 0;
       this.sprite.play();
     } else if (
-      next === "fall-right" || next === "fall-left" ||
-      next === "fall-land-right" || next === "fall-land-left"
+      next === "fall-right" ||
+      next === "fall-left" ||
+      next === "fall-land-right" ||
+      next === "fall-land-left"
     ) {
       this.sprite.position.set(0, FALL_Y_OFFSET);
       this.sprite.animationSpeed = FALL_ANIM_SPEED;
       this.sprite.loop = false;
       this.sprite.currentFrame = 0;
       this.sprite.play();
+    } else if (
+      next === "jump-right" ||
+      next === "jump-left" ||
+      next === "jump-land-right" ||
+      next === "jump-land-left"
+    ) {
+      this.sprite.position.set(0, LONG_JUMP_Y_OFFSET);
+      this.sprite.animationSpeed = LONG_JUMP_ANIM_SPEED;
+      this.sprite.loop = false;
+      this.sprite.currentFrame = 0;
+      this.sprite.play();
     }
-    // idle, jump, shoot-ready: stopped at frame 0
+    // idle, shoot-ready: stopped at frame 0
   }
 
   hit() {
@@ -602,6 +697,10 @@ export class Player {
           this.setState("platform-jump-land-right");
         } else if (this.state === "platform-jump-left") {
           this.setState("platform-jump-land-left");
+        } else if (this.state === "jump-right") {
+          this.setState("jump-land-right");
+        } else if (this.state === "jump-left") {
+          this.setState("jump-land-left");
         } else if (this.state === "fall-right") {
           this.setState("fall-land-right");
         } else if (this.state === "fall-left") {
@@ -609,18 +708,6 @@ export class Player {
         } else {
           this.setState(this.facingLeft() ? "idle-left" : "idle-right");
         }
-      }
-      return;
-    }
-
-    // --- JUMP STARTUP ---
-    if (this.preJumpTimer > 0) {
-      this.preJumpTimer--;
-      if (this.preJumpTimer === 0) {
-        this.isGrounded = false;
-        this.velocityY = -JUMP_STRENGTH;
-        this.velocityX = this.pendingJumpVX;
-        this.setState(this.pendingJumpState);
       }
       return;
     }
@@ -643,7 +730,7 @@ export class Player {
       return;
     }
 
-    // --- PLATFORM JUMP / HANG / LAND: locked until animation completes ---
+    // --- LOCKED ANIMATIONS: platform jump, land, hang, fall land, long jump startup/land ---
     if (
       this.state === "platform-jump-right" ||
       this.state === "platform-jump-left" ||
@@ -652,7 +739,11 @@ export class Player {
       this.state === "platform-jump-land-right" ||
       this.state === "platform-jump-land-left" ||
       this.state === "fall-land-right" ||
-      this.state === "fall-land-left"
+      this.state === "fall-land-left" ||
+      this.state === "jump-right" || // long jump startup (isGrounded, pre-launch)
+      this.state === "jump-left" ||
+      this.state === "jump-land-right" ||
+      this.state === "jump-land-left"
     ) {
       return;
     }
@@ -708,19 +799,17 @@ export class Player {
     }
 
     if (jump) {
+      // Long jump: animation handles startup timing; physics fire at onFrameChange frame 2
       if (left && !right) {
-        this.pendingJumpVX = -JUMP_SPEED_X;
-        this.pendingJumpState = "jump-left";
-        this.setState("idle-left");
+        this.pendingJumpVX = -LONG_JUMP_SPEED_X;
+        this.setState("jump-left");
       } else if (right && !left) {
-        this.pendingJumpVX = JUMP_SPEED_X;
-        this.pendingJumpState = "jump-right";
-        this.setState("idle-right");
+        this.pendingJumpVX = LONG_JUMP_SPEED_X;
+        this.setState("jump-right");
       } else {
         this.pendingJumpVX = 0;
-        this.pendingJumpState = this.facingLeft() ? "jump-left" : "jump-right";
+        this.setState(this.facingLeft() ? "jump-left" : "jump-right");
       }
-      this.preJumpTimer = PRE_JUMP_FRAMES;
       return;
     }
 

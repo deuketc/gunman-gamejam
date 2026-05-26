@@ -6,6 +6,7 @@ export type { Rect };
 export interface PendingShot {
   x: number;
   y: number;
+  vx: number; // horizontal velocity — negative = left, positive = right
 }
 
 export interface EnemyBase {
