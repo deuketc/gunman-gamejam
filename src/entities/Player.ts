@@ -12,6 +12,8 @@ type PlayerState =
   | "jump-right"
   | "jump-land-left"
   | "jump-land-right"
+  | "jump-hang-left"
+  | "jump-hang-right"
   | "shoot-cycle-left"
   | "shoot-cycle-right"
   | "shoot-ready-left"
@@ -60,7 +62,7 @@ const PLATFORM_JUMP_FRAMES = 9;
 const PLATFORM_JUMP_LAUNCH_FRAME = 6; // 0-indexed: physics fire here
 const PLATFORM_JUMP_STARTUP_COUNT = 6; // frames 0-5 play while grounded
 const PLATFORM_JUMP_ANIM_SPEED = 0.2;
-const PLATFORM_JUMP_STRENGTH = 8; // slightly lower than normal jump
+const PLATFORM_JUMP_STRENGTH = 5.5; // slightly lower than normal jump
 const PLATFORM_JUMP_Y_OFFSET = 32; // shift 128px frame down to align feet with ground
 const PULL_UP_PATH =
   "/assets/gunman-ani-stand-shutgun-pull-up-to-platform-right.png";
@@ -87,7 +89,9 @@ const LONG_JUMP_LAND_START = 8; // frames 8–10: cooldown on landing
 const LONG_JUMP_LAND_FRAMES = 3;
 const LONG_JUMP_ANIM_SPEED = 0.2;
 const LONG_JUMP_Y_OFFSET = 32; // standard 128px offset
-const LONG_JUMP_STRENGTH = 5; // slightly less height than platform jump
+const LONG_JUMP_STRENGTH = 5;
+const LONG_JUMP_HANG_Y_OFFSET = 47; // sprite offset when hanging after a long jump (container.y = p.y + 52)
+const LONG_JUMP_PULL_UP_Y_OFFSET = 28; // sprite offset for pull-up animation from long-jump hang // slightly less height than platform jump
 const LONG_JUMP_SPEED_X = 3; // more horizontal range than old jump (was 2)
 
 const IDLE_FRONT_FRAMES = 17;
@@ -142,6 +146,7 @@ export class Player {
   private idleTimer = 0;
   private lastFacingLeft = false;
   private hangPlatformY = 0;
+  private pullUpYOffset = PULL_UP_Y_OFFSET; // set per hang type so pull-up aligns correctly
 
   constructor(x: number, y: number, screenW: number, groundY: number) {
     this.screenW = screenW;
@@ -198,6 +203,21 @@ export class Player {
         LONG_JUMP_AIR_END,
         LONG_JUMP_FRAME_W,
         LONG_JUMP_FRAME_H,
+      ),
+      // Hang: reuse platform-jump sheet frozen at its last frame (the dedicated hang pose)
+      "jump-hang-right": cropFrames(
+        pjR,
+        0,
+        PLATFORM_JUMP_FRAMES,
+        PLATFORM_JUMP_FRAME_W,
+        PLATFORM_JUMP_FRAME_H,
+      ),
+      "jump-hang-left": cropFrames(
+        pjR,
+        0,
+        PLATFORM_JUMP_FRAMES,
+        PLATFORM_JUMP_FRAME_W,
+        PLATFORM_JUMP_FRAME_H,
       ),
       // Landing cooldown: frames 8–10
       "jump-land-right": cropFrames(
@@ -476,6 +496,7 @@ export class Player {
       next === "platform-jump-hang-right" ||
       next === "platform-jump-hang-left"
     ) {
+      this.pullUpYOffset = PULL_UP_Y_OFFSET; // standard hang offset
       this.sprite.position.set(0, PLATFORM_JUMP_Y_OFFSET);
       this.sprite.loop = false;
       this.sprite.currentFrame = PLATFORM_JUMP_FRAMES - 1; // frozen at last frame
@@ -484,7 +505,7 @@ export class Player {
       next === "platform-pull-up-right" ||
       next === "platform-pull-up-left"
     ) {
-      this.sprite.position.set(0, PULL_UP_Y_OFFSET);
+      this.sprite.position.set(0, this.pullUpYOffset);
       this.sprite.animationSpeed = PULL_UP_ANIM_SPEED;
       this.sprite.loop = false;
       this.sprite.currentFrame = 0;
@@ -511,6 +532,12 @@ export class Player {
       this.sprite.loop = false;
       this.sprite.currentFrame = 0;
       this.sprite.play();
+    } else if (next === "jump-hang-right" || next === "jump-hang-left") {
+      this.pullUpYOffset = LONG_JUMP_PULL_UP_Y_OFFSET; // pull-up must align from lower snap position
+      this.sprite.position.set(0, LONG_JUMP_HANG_Y_OFFSET);
+      this.sprite.loop = false;
+      this.sprite.currentFrame = PLATFORM_JUMP_FRAMES - 1; // frozen at dedicated hang frame
+      // don't call play() — sprite stays still
     }
     // idle, shoot-ready: stopped at frame 0
   }
@@ -582,21 +609,20 @@ export class Player {
     this.pendingBullets.push({ x: barrelX, y: barrelY, angle: base });
   }
 
-  // Starts the reverse-turn animation from the position matching where forward got to.
+  // Starts the pull-up animation from any hang state.
   private startPullUp() {
-    this.setState(
-      this.state === "platform-jump-hang-left"
-        ? "platform-pull-up-left"
-        : "platform-pull-up-right",
-    );
+    const isLeft = this.state.includes("-left");
+    this.setState(isLeft ? "platform-pull-up-left" : "platform-pull-up-right");
   }
 
   // Drop from a platform hang — reverts to the airborne jump state so landing triggers the land animation.
   private startHangDrop() {
-    this.state =
-      this.state === "platform-jump-hang-left"
-        ? "platform-jump-left"
-        : "platform-jump-right";
+    if (this.state === "platform-jump-hang-left")
+      this.state = "platform-jump-left";
+    else if (this.state === "platform-jump-hang-right")
+      this.state = "platform-jump-right";
+    else if (this.state === "jump-hang-left") this.state = "jump-left";
+    else this.state = "jump-right";
     this.velocityY = 2; // nudge downward so physics take over
   }
 
@@ -636,7 +662,9 @@ export class Player {
       // --- HANGING: frozen on platform underside ---
       if (
         this.state === "platform-jump-hang-right" ||
-        this.state === "platform-jump-hang-left"
+        this.state === "platform-jump-hang-left" ||
+        this.state === "jump-hang-right" ||
+        this.state === "jump-hang-left"
       ) {
         if (Input.isAnyDown("ArrowDown", "KeyS")) this.startHangDrop();
         else if (turnKey) this.startPullUp();
@@ -659,29 +687,42 @@ export class Player {
       const prevY = this.container.y;
       this.container.y += this.velocityY;
 
-      // --- Platform grab: detection zone top crosses a platform while jumping upward ---
+      // --- Platform grab: detection zone top meets a platform edge ---
       if (
-        (this.state === "platform-jump-right" ||
-          this.state === "platform-jump-left") &&
-        this.velocityY < 0
+        this.state === "platform-jump-right" ||
+        this.state === "platform-jump-left" ||
+        this.state === "jump-right" ||
+        this.state === "jump-left"
       ) {
-        // Detection zone top for platform-jump airborne = container.y - 52 - 15
-        const dzTop = this.container.y - 67;
-        const prevDzTop = prevY - 67;
+        // platform-jump has a +15 raise; long jump uses the plain airborne top (cy - 52)
+        const isLongJump =
+          this.state === "jump-right" || this.state === "jump-left";
+        const hangOffset = isLongJump ? 52 : 67;
+        const dzTop = this.container.y - hangOffset;
+        const prevDzTop = prevY - hangOffset;
         const dz = this.detectionZone();
         for (const p of this.platforms) {
           const xOverlap = dz.x < p.x + p.w && dz.x + dz.w > p.x;
-          const crossed = dzTop <= p.y && prevDzTop > p.y;
-          if (xOverlap && crossed) {
+
+          // Case 1: ascending — dzTop crosses platform surface from below
+          const verticalGrab =
+            this.velocityY < 0 && dzTop <= p.y && prevDzTop > p.y;
+
+          // Case 2: descending — dzTop crosses platform surface from above
+          const descendingGrab =
+            this.velocityY > 0 && dzTop >= p.y && prevDzTop < p.y;
+
+          if (xOverlap && (verticalGrab || descendingGrab)) {
             this.hangPlatformY = p.y; // remember for pull-up landing
-            this.container.y = p.y + 67; // snap so detection zone top sits at platform surface
+            this.container.y = p.y + hangOffset; // snap detection zone top to platform surface
             this.velocityX = 0;
             this.velocityY = 0;
-            this.setState(
-              this.state === "platform-jump-left"
-                ? "platform-jump-hang-left"
-                : "platform-jump-hang-right",
-            );
+            if (this.state === "jump-right") this.setState("jump-hang-right");
+            else if (this.state === "jump-left")
+              this.setState("jump-hang-left");
+            else if (this.state === "platform-jump-left")
+              this.setState("platform-jump-hang-left");
+            else this.setState("platform-jump-hang-right");
             return;
           }
         }

@@ -155,19 +155,19 @@ export class GameScene {
           .fill({ color: 0xff0000, alpha: 0.15 })
           .stroke({ color: 0xff0000, width: 1 });
       }
-      // Player hurtbox — cyan
+      // Player hurtbox — red
       if (!this.player.dead) {
         const phb = this.player.hurtbox();
         this.debugGfx
           .rect(phb.x, phb.y, phb.w, phb.h)
-          .fill({ color: 0x00ffff, alpha: 0.15 })
-          .stroke({ color: 0x00ffff, width: 1 });
-        // Player detection zone — magenta
+          .fill({ color: 0xff0000, alpha: 0.15 })
+          .stroke({ color: 0xff0000, width: 1 });
+        // Player detection zone — yellow
         const pdz = this.player.detectionZone();
         this.debugGfx
           .rect(pdz.x, pdz.y, pdz.w, pdz.h)
-          .fill({ color: 0xff00ff, alpha: 0.1 })
-          .stroke({ color: 0xff00ff, width: 1 });
+          .fill({ color: 0xffff00, alpha: 0.1 })
+          .stroke({ color: 0xffff00, width: 1 });
       }
       // Player position crosshair
       this.debugGfx
