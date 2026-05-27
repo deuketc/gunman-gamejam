@@ -34,6 +34,8 @@ async function main() {
     "/assets/enemy-ani-ver2-idle.png",
     "/assets/enemy-ani-ver2-shoot.png",
     "/assets/enemy-ani-ver2-death.png",
+    "/assets/drone-ani-flying-left.png",
+    "/assets/drone-ani-explodes-left.png",
   ]);
 
   const game = new Game(app);

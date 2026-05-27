@@ -5,6 +5,7 @@ import type { Platform } from "../entities/Platform";
 import { Bullet } from "../entities/projectiles/Bullet";
 import type { EnemyBase, Rect } from "../entities/enemies/EnemyBase";
 import { EnemyStatic, ENEMY_V1, ENEMY_V2 } from "../entities/enemies/EnemyStatic";
+import { EnemyDrone } from "../entities/enemies/EnemyDrone";
 import { EnemyLaser } from "../entities/projectiles/EnemyLaser";
 
 function pointInRect(px: number, py: number, r: Rect): boolean {
@@ -47,6 +48,10 @@ export class GameScene {
     this.enemies.push(enemy2);
     this.container.addChild(enemy2.container);
 
+    const drone = new EnemyDrone(this.screenW / 2 + 110, 42);
+    this.enemies.push(drone);
+    this.container.addChild(drone.container);
+
     this.platforms = [
       { x: 0, y: groundY - 230, w: 228 },
       { x: 207, y: groundY - 110, w: 250 },
@@ -80,11 +85,20 @@ export class GameScene {
     for (const e of this.enemies)
       if (!e.dead) e.update(playerX, playerY, playerMoving);
 
+    // Remove dead enemies that have removeOnDeath set (e.g. drone)
+    this.enemies = this.enemies.filter(e => {
+      if (e.dead && e.removeOnDeath) {
+        this.container.removeChild(e.container);
+        return false;
+      }
+      return true;
+    });
+
     // Collect enemy shots
     for (const e of this.enemies)
       if (!e.dead) {
         for (const s of e.takePendingShots()) {
-          const laser = new EnemyLaser(s.x, s.y, s.vx, s.color, s.coreColor);
+          const laser = new EnemyLaser(s.x, s.y, s.vx, s.vy ?? 0, s.color, s.coreColor);
           this.lasers.push(laser);
           this.container.addChild(laser.container);
         }
