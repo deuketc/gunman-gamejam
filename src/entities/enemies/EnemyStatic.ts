@@ -9,32 +9,105 @@ type EnemyState =
   | "shoot"
   | "dying";
 
-const IDLE_PATH = "/assets/enemy-ani-stand-facing-idle.png";
-const WALK_PATH = "/assets/enemy-ani-walk-with-gun-left.png";
-const RAISE_PATH = "/assets/enemy-ani-stand-facing-raise-gun.png";
-const DEATH_PATH = "/assets/enemy-ani-stand-facing-idle-death-from-bullet.png";
+// ─── Config ──────────────────────────────────────────────────────────────────
 
-const FRAME_W = 64;
-const FRAME_H = 64;
-const DEATH_FRAME_W = 128;
-const DEATH_FRAME_H = 128;
-const DEATH_FRAME_COUNT = 16;
-const IDLE_FRAME_COUNT = 13;
-const WALK_FRAME_COUNT = 14;
-const ALERT_FRAME_COUNT = 9; // frames 0–8 of raise-gun sheet
-const SHOOT_FRAME_START = 9; // frames 9–15 of raise-gun sheet
-const SHOOT_FRAME_COUNT = 7;
+export interface EnemyStaticConfig {
+  // Asset paths
+  idlePath: string;
+  walkPath: string;
+  raisePath: string; // single sheet: alert frames first, then shoot loop frames
+  deathPath: string;
 
-const WALK_SPEED = 0.5; // px per frame
-const PATROL_DISTANCE = 200; // px from origin
-const IDLE_TICKS = 300; // 5 s at 60 fps
-const ALERT_DISTANCE = 200; // detection range px
-const LASER_SPEED = 10; // px per frame
-const BARREL_OFFSET_X = 24; // px from sprite centre to barrel tip
-const BARREL_OFFSET_Y = -42; // px up from ground anchor
+  // Standard frame size (walk / idle / alert / shoot)
+  frameW: number;
+  frameH: number;
 
-const ANIM_SPEED = 0.15;
-const WALK_ANIM_SPEED = 0.2;
+  // Death frame size (often larger)
+  deathFrameW: number;
+  deathFrameH: number;
+
+  // Frame counts
+  idleFrameCount: number;
+  walkFrameCount: number;
+  alertFrameCount: number;  // raise-gun section (0-indexed start = 0)
+  shootFrameStart: number;  // 0-indexed first frame of shoot loop on raise sheet
+  shootFrameCount: number;
+  deathFrameCount: number;
+
+  // Laser colours — optional, fall back to default blue
+  laserColor?: number;
+  laserCoreColor?: number;
+
+  // Behaviour — all optional, fall back to defaults below
+  startWalkRight?: boolean; // start walking right instead of left (default false)
+  shootFireFrame?: number;  // which frame of the shoot loop spawns the laser (default 1)
+  shootDelay?: number;     // extra ticks to pause between shoot loops (default 0 = continuous)
+  walkSpeed?: number;
+  patrolDistance?: number;
+  idleTicks?: number;
+  alertDistance?: number;
+  laserSpeed?: number;
+  barrelOffsetX?: number;
+  barrelOffsetY?: number;
+  animSpeed?: number;
+  walkAnimSpeed?: number;
+}
+
+// ─── Preset configs ───────────────────────────────────────────────────────────
+
+export const ENEMY_V1: EnemyStaticConfig = {
+  idlePath:  "/assets/enemy-ani-stand-facing-idle.png",
+  walkPath:  "/assets/enemy-ani-walk-with-gun-left.png",
+  raisePath: "/assets/enemy-ani-stand-facing-raise-gun.png",
+  deathPath: "/assets/enemy-ani-stand-facing-idle-death-from-bullet.png",
+  frameW: 64, frameH: 64,
+  deathFrameW: 128, deathFrameH: 128,
+  idleFrameCount:  13,
+  walkFrameCount:  14,
+  alertFrameCount: 7,  // frames 0–6: raise gun
+  shootFrameStart: 7,  // frame 7: first shoot frame
+  shootFrameCount: 3,  // frames 7–9
+  deathFrameCount: 16,
+  barrelOffsetY:   -47, // 5 px higher than default (-42)
+  shootDelay:      60, // ~1 s pause at frame 9 before shooting again
+};
+
+export const ENEMY_V2: EnemyStaticConfig = {
+  idlePath:  "/assets/enemy-ani-ver2-idle.png",
+  walkPath:  "/assets/enemy-ani-ver2-walk.png",
+  raisePath: "/assets/enemy-ani-ver2-shoot.png",
+  deathPath: "/assets/enemy-ani-ver2-death.png",
+  frameW: 64, frameH: 64,
+  deathFrameW: 128, deathFrameH: 128,
+  idleFrameCount:  12,
+  walkFrameCount:  10,
+  alertFrameCount: 7,  // frames 0–6 (1-indexed: 1–7)
+  shootFrameStart: 7,  // frame 7  (1-indexed: 8)
+  shootFrameCount: 4,  // frames 7–10 (1-indexed: 8–11)
+  deathFrameCount: 13,
+  barrelOffsetY:   -50, // 8 px higher than default (-42)
+  shootFireFrame:  0,   // fire 1 frame earlier than default (1)
+  startWalkRight:  true,
+  patrolDistance:  100, // shorter than default (200) to stay on platform
+  idleTicks:       600, // 10 s (default 5 s + 5 s extra)
+  shootDelay:      90,  // ~1.5 s pause between shoot loops
+  laserColor:      0xcc0000,
+  laserCoreColor:  0xff8888,
+};
+
+// ─── Behaviour defaults ───────────────────────────────────────────────────────
+
+const DEFAULT_WALK_SPEED      = 0.5;
+const DEFAULT_PATROL_DISTANCE = 200;
+const DEFAULT_IDLE_TICKS      = 300;   // 5 s at 60 fps
+const DEFAULT_ALERT_DISTANCE  = 200;
+const DEFAULT_LASER_SPEED     = 10;
+const DEFAULT_BARREL_OFFSET_X = 24;
+const DEFAULT_BARREL_OFFSET_Y = -42;
+const DEFAULT_ANIM_SPEED      = 0.15;
+const DEFAULT_WALK_ANIM_SPEED = 0.2;
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function cropFrames(
   sheet: Texture,
@@ -53,12 +126,14 @@ function cropFrames(
   );
 }
 
+// ─── Class ────────────────────────────────────────────────────────────────────
+
 export class EnemyStatic implements EnemyBase {
   readonly container: Container;
   dead = false;
 
   private sprite: AnimatedSprite;
-  private state: EnemyState = "walk-left";
+  private state: EnemyState;
   private textures: {
     idle: Texture[];
     walk: Texture[];
@@ -69,68 +144,107 @@ export class EnemyStatic implements EnemyBase {
   private pendingShots: PendingShot[] = [];
 
   private originX: number;
-  private facingLeft = true; // true → scale.x 1 (sprite naturally faces left)
-  private patrolGoingLeft = true; // patrol direction preserved through detection
+  private facingLeft = true;
+  private patrolGoingLeft = true;
   private idleTimer = 0;
 
-  constructor(x: number, y: number) {
+  // Resolved behaviour values
+  private walkSpeed: number;
+  private patrolDistance: number;
+  private idleTicks: number;
+  private alertDistance: number;
+  private laserSpeed: number;
+  private barrelOffsetX: number;
+  private barrelOffsetY: number;
+  private animSpeed: number;
+  private walkAnimSpeed: number;
+  private frameW: number;
+  private frameH: number;
+  private laserColor: number | undefined;
+  private laserCoreColor: number | undefined;
+  private shootFireFrame: number;
+  private shootDelay: number;
+  private shootDelayTimer = 0;
+
+  constructor(x: number, y: number, config: EnemyStaticConfig) {
     this.container = new Container();
     this.originX = x;
 
-    const idleSheet = Assets.get<Texture>(IDLE_PATH);
-    const walkSheet = Assets.get<Texture>(WALK_PATH);
-    const raiseSheet = Assets.get<Texture>(RAISE_PATH);
-    const deathSheet = Assets.get<Texture>(DEATH_PATH);
+    // Resolve behaviour with defaults
+    this.walkSpeed      = config.walkSpeed      ?? DEFAULT_WALK_SPEED;
+    this.patrolDistance = config.patrolDistance ?? DEFAULT_PATROL_DISTANCE;
+    this.idleTicks      = config.idleTicks      ?? DEFAULT_IDLE_TICKS;
+    this.alertDistance  = config.alertDistance  ?? DEFAULT_ALERT_DISTANCE;
+    this.laserSpeed     = config.laserSpeed     ?? DEFAULT_LASER_SPEED;
+    this.barrelOffsetX  = config.barrelOffsetX  ?? DEFAULT_BARREL_OFFSET_X;
+    this.barrelOffsetY  = config.barrelOffsetY  ?? DEFAULT_BARREL_OFFSET_Y;
+    this.animSpeed      = config.animSpeed      ?? DEFAULT_ANIM_SPEED;
+    this.walkAnimSpeed  = config.walkAnimSpeed  ?? DEFAULT_WALK_ANIM_SPEED;
+    this.frameW         = config.frameW;
+    this.frameH         = config.frameH;
+    this.laserColor     = config.laserColor;
+    this.laserCoreColor = config.laserCoreColor;
+    this.shootFireFrame = config.shootFireFrame ?? 1;
+    this.shootDelay     = config.shootDelay ?? 0;
+
+    const idleSheet  = Assets.get<Texture>(config.idlePath);
+    const walkSheet  = Assets.get<Texture>(config.walkPath);
+    const raiseSheet = Assets.get<Texture>(config.raisePath);
+    const deathSheet = Assets.get<Texture>(config.deathPath);
 
     this.textures = {
-      idle: cropFrames(idleSheet, 0, IDLE_FRAME_COUNT, FRAME_W, FRAME_H),
-      walk: cropFrames(walkSheet, 0, WALK_FRAME_COUNT, FRAME_W, FRAME_H),
-      alert: cropFrames(raiseSheet, 0, ALERT_FRAME_COUNT, FRAME_W, FRAME_H),
-      shoot: cropFrames(
-        raiseSheet,
-        SHOOT_FRAME_START,
-        SHOOT_FRAME_COUNT,
-        FRAME_W,
-        FRAME_H,
-      ),
-      dying: cropFrames(
-        deathSheet,
-        0,
-        DEATH_FRAME_COUNT,
-        DEATH_FRAME_W,
-        DEATH_FRAME_H,
-      ),
+      idle:  cropFrames(idleSheet,  0,                      config.idleFrameCount,  config.frameW,      config.frameH),
+      walk:  cropFrames(walkSheet,  0,                      config.walkFrameCount,  config.frameW,      config.frameH),
+      alert: cropFrames(raiseSheet, 0,                      config.alertFrameCount, config.frameW,      config.frameH),
+      shoot: cropFrames(raiseSheet, config.shootFrameStart, config.shootFrameCount, config.frameW,      config.frameH),
+      dying: cropFrames(deathSheet, 0,                      config.deathFrameCount, config.deathFrameW, config.deathFrameH),
     };
+
+    this.state = config.startWalkRight ? "walk-right" : "walk-left";
+    this.facingLeft = !config.startWalkRight;
+    this.patrolGoingLeft = !config.startWalkRight;
 
     this.sprite = new AnimatedSprite(this.textures.walk);
     this.sprite.anchor.set(0.5, 1);
-    this.sprite.animationSpeed = WALK_ANIM_SPEED;
+    this.sprite.scale.x = this.facingLeft ? 1 : -1;
+    this.sprite.animationSpeed = this.walkAnimSpeed;
     this.sprite.loop = true;
     this.sprite.play();
 
-    // Fire a laser on frame 1 of each shoot loop iteration
+    // Fire a laser on the configured shoot frame
     this.sprite.onFrameChange = (frame: number) => {
-      if (this.state === "shoot" && frame === 1) {
+      if (this.state === "shoot" && frame === this.shootFireFrame) {
         this.pendingShots.push({
-          x:
-            this.container.x +
-            (this.facingLeft ? -BARREL_OFFSET_X : BARREL_OFFSET_X),
-          y: this.container.y + BARREL_OFFSET_Y,
-          vx: this.facingLeft ? -LASER_SPEED : LASER_SPEED,
+          x:  this.container.x + (this.facingLeft ? -this.barrelOffsetX : this.barrelOffsetX),
+          y:  this.container.y + this.barrelOffsetY,
+          vx:        this.facingLeft ? -this.laserSpeed : this.laserSpeed,
+          color:     this.laserColor,
+          coreColor: this.laserCoreColor,
         });
       }
     };
 
     this.sprite.onComplete = () => {
-      if (this.state === "alert") this.setState("shoot");
-      else if (this.state === "dying") this.dead = true;
+      if (this.state === "alert") {
+        this.setState("shoot");
+      } else if (this.state === "shoot") {
+        // Freeze at last frame (gun fired) and wait before shooting again
+        if (this.shootDelay > 0) {
+          this.shootDelayTimer = this.shootDelay;
+        } else {
+          this.sprite.currentFrame = 0;
+          this.sprite.play();
+        }
+      } else if (this.state === "dying") {
+        this.dead = true;
+      }
     };
 
     this.container.addChild(this.sprite);
     this.container.position.set(x, y);
   }
 
-  // ─── Private helpers ────────────────────────────────────────────────────────
+  // ─── Private helpers ──────────────────────────────────────────────────────
 
   private applyFacing() {
     this.sprite.scale.x = this.facingLeft ? 1 : -1;
@@ -147,7 +261,7 @@ export class EnemyStatic implements EnemyBase {
         this.patrolGoingLeft = true;
         this.applyFacing();
         this.sprite.textures = this.textures.walk;
-        this.sprite.animationSpeed = WALK_ANIM_SPEED;
+        this.sprite.animationSpeed = this.walkAnimSpeed;
         this.sprite.loop = true;
         this.sprite.currentFrame = 0;
         this.sprite.play();
@@ -158,26 +272,26 @@ export class EnemyStatic implements EnemyBase {
         this.patrolGoingLeft = false;
         this.applyFacing();
         this.sprite.textures = this.textures.walk;
-        this.sprite.animationSpeed = WALK_ANIM_SPEED;
+        this.sprite.animationSpeed = this.walkAnimSpeed;
         this.sprite.loop = true;
         this.sprite.currentFrame = 0;
         this.sprite.play();
         break;
 
       case "idle":
-        this.applyFacing(); // keep whichever direction we arrived from
+        this.applyFacing();
         this.sprite.textures = this.textures.idle;
-        this.sprite.animationSpeed = ANIM_SPEED;
+        this.sprite.animationSpeed = this.animSpeed;
         this.sprite.loop = true;
         this.sprite.currentFrame = 0;
         this.sprite.play();
-        this.idleTimer = IDLE_TICKS;
+        this.idleTimer = this.idleTicks;
         break;
 
       case "alert":
         this.applyFacing();
         this.sprite.textures = this.textures.alert;
-        this.sprite.animationSpeed = ANIM_SPEED;
+        this.sprite.animationSpeed = this.animSpeed;
         this.sprite.loop = false;
         this.sprite.currentFrame = 0;
         this.sprite.play();
@@ -186,17 +300,17 @@ export class EnemyStatic implements EnemyBase {
       case "shoot":
         this.applyFacing();
         this.sprite.textures = this.textures.shoot;
-        this.sprite.animationSpeed = ANIM_SPEED;
-        this.sprite.loop = true;
+        this.sprite.animationSpeed = this.animSpeed;
+        this.sprite.loop = this.shootDelay <= 0; // play-once when delay is set
         this.sprite.currentFrame = 0;
         this.sprite.play();
         break;
 
       case "dying":
-        this.sprite.scale.x = 1; // reset flip for death
+        this.sprite.scale.x = 1;
         this.sprite.position.set(0, 32);
         this.sprite.textures = this.textures.dying;
-        this.sprite.animationSpeed = ANIM_SPEED;
+        this.sprite.animationSpeed = this.animSpeed;
         this.sprite.loop = false;
         this.sprite.currentFrame = 0;
         this.sprite.play();
@@ -204,10 +318,8 @@ export class EnemyStatic implements EnemyBase {
     }
   }
 
-  // Determine walk direction when resuming patrol after detection.
-  // Uses position so resuming at a waypoint doesn't immediately re-trigger idle.
   private resumePatrol() {
-    if (this.container.x <= this.originX - PATROL_DISTANCE) {
+    if (this.container.x <= this.originX - this.patrolDistance) {
       this.setState("walk-right");
     } else if (this.container.x >= this.originX) {
       this.setState("walk-left");
@@ -216,7 +328,7 @@ export class EnemyStatic implements EnemyBase {
     }
   }
 
-  // ─── EnemyBase interface ────────────────────────────────────────────────────
+  // ─── EnemyBase interface ──────────────────────────────────────────────────
 
   hit() {
     if (this.state === "dying") return;
@@ -225,35 +337,43 @@ export class EnemyStatic implements EnemyBase {
 
   hitbox(): Rect {
     return {
-      x: this.container.x - FRAME_W / 2 + 8,
-      y: this.container.y - FRAME_H,
-      w: FRAME_W - 16,
-      h: FRAME_H,
+      x: this.container.x - this.frameW / 2 + 8,
+      y: this.container.y - this.frameH,
+      w: this.frameW - 16,
+      h: this.frameH,
     };
   }
 
-  // Detection zone always extends in front of the enemy
   detectionZone(): Rect {
     const x = this.container.x;
     const y = this.container.y;
     if (this.facingLeft) {
       return {
-        x: x - FRAME_W / 2 - ALERT_DISTANCE,
-        y: y - FRAME_H,
-        w: ALERT_DISTANCE,
-        h: FRAME_H,
+        x: x - this.frameW / 2 - this.alertDistance,
+        y: y - this.frameH,
+        w: this.alertDistance,
+        h: this.frameH,
       };
     }
     return {
-      x: x + FRAME_W / 2,
-      y: y - FRAME_H,
-      w: ALERT_DISTANCE,
-      h: FRAME_H,
+      x: x + this.frameW / 2,
+      y: y - this.frameH,
+      w: this.alertDistance,
+      h: this.frameH,
     };
   }
 
   update(playerX: number, playerY: number, _playerMoving: boolean) {
     if (this.state === "dying") return;
+
+    // Shoot delay countdown — resume animation once timer expires
+    if (this.shootDelayTimer > 0) {
+      this.shootDelayTimer--;
+      if (this.shootDelayTimer === 0 && this.state === "shoot") {
+        this.sprite.currentFrame = 0; // restart from frame 7 (index 0 of shoot textures)
+        this.sprite.play();
+      }
+    }
 
     const dz = this.detectionZone();
     const detected =
@@ -262,31 +382,28 @@ export class EnemyStatic implements EnemyBase {
       playerY >= dz.y &&
       playerY <= dz.y + dz.h;
 
-    // ─── ALERT / SHOOT: keep attacking while player is detected ──────────────
     if (this.state === "alert" || this.state === "shoot") {
       if (!detected) this.resumePatrol();
       return;
     }
 
-    // ─── PLAYER SPOTTED: face them and raise gun ─────────────────────────────
     if (detected) {
       this.facingLeft = playerX < this.container.x;
       this.setState("alert");
       return;
     }
 
-    // ─── PATROL ──────────────────────────────────────────────────────────────
     switch (this.state) {
       case "walk-left":
-        this.container.x -= WALK_SPEED;
-        if (this.container.x <= this.originX - PATROL_DISTANCE) {
-          this.container.x = this.originX - PATROL_DISTANCE;
+        this.container.x -= this.walkSpeed;
+        if (this.container.x <= this.originX - this.patrolDistance) {
+          this.container.x = this.originX - this.patrolDistance;
           this.setState("idle");
         }
         break;
 
       case "walk-right":
-        this.container.x += WALK_SPEED;
+        this.container.x += this.walkSpeed;
         if (this.container.x >= this.originX) {
           this.container.x = this.originX;
           this.setState("idle");
@@ -296,7 +413,6 @@ export class EnemyStatic implements EnemyBase {
       case "idle":
         this.idleTimer--;
         if (this.idleTimer <= 0) {
-          // Turn around — walk the opposite direction to the one we arrived from
           this.setState(this.facingLeft ? "walk-right" : "walk-left");
         }
         break;

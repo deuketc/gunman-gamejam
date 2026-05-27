@@ -30,6 +30,10 @@ async function main() {
     "/assets/gunman-ani-stand-shutgun-pull-up-to-platform-right.png",
     "/assets/gunman-ani-fall-shutgun-right.png",
     "/assets/gunman-ani-right-jump-long.png",
+    "/assets/enemy-ani-ver2-walk.png",
+    "/assets/enemy-ani-ver2-idle.png",
+    "/assets/enemy-ani-ver2-shoot.png",
+    "/assets/enemy-ani-ver2-death.png",
   ]);
 
   const game = new Game(app);

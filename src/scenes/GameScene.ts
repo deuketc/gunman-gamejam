@@ -4,7 +4,7 @@ import { Player } from "../entities/Player";
 import type { Platform } from "../entities/Platform";
 import { Bullet } from "../entities/projectiles/Bullet";
 import type { EnemyBase, Rect } from "../entities/enemies/EnemyBase";
-import { EnemyStatic } from "../entities/enemies/EnemyStatic";
+import { EnemyStatic, ENEMY_V1, ENEMY_V2 } from "../entities/enemies/EnemyStatic";
 import { EnemyLaser } from "../entities/projectiles/EnemyLaser";
 
 function pointInRect(px: number, py: number, r: Rect): boolean {
@@ -39,9 +39,13 @@ export class GameScene {
     ground.moveTo(0, groundY).lineTo(this.screenW, groundY);
     this.container.addChild(ground);
 
-    const enemy = new EnemyStatic(this.screenW - 50, groundY);
-    this.enemies.push(enemy);
-    this.container.addChild(enemy.container);
+    const enemy1 = new EnemyStatic(this.screenW - 50, groundY, ENEMY_V1);
+    this.enemies.push(enemy1);
+    this.container.addChild(enemy1.container);
+
+    const enemy2 = new EnemyStatic(207 + 180, groundY - 109, ENEMY_V2);
+    this.enemies.push(enemy2);
+    this.container.addChild(enemy2.container);
 
     this.platforms = [
       { x: 0, y: groundY - 230, w: 228 },
@@ -50,7 +54,7 @@ export class GameScene {
       { x: 538, y: groundY - 230, w: 102 },
     ];
 
-    this.player = new Player(50, 88, this.screenW, groundY);
+    this.player = new Player(100, groundY, this.screenW, groundY);
     this.player.setPlatforms(this.platforms);
     this.lastPlayerX = 50;
     this.container.addChild(this.player.container);
@@ -66,8 +70,9 @@ export class GameScene {
 
     this.player.update(dt);
 
-    const playerX = this.player.container.x;
-    const playerY = this.player.container.y;
+    // When dead, pass off-screen coords so enemies lose detection and resume patrol
+    const playerX = this.player.dead ? -9999 : this.player.container.x;
+    const playerY = this.player.dead ? -9999 : this.player.container.y;
     const playerMoving = Math.abs(playerX - this.lastPlayerX) > 0.1;
     this.lastPlayerX = playerX;
 
@@ -79,7 +84,7 @@ export class GameScene {
     for (const e of this.enemies)
       if (!e.dead) {
         for (const s of e.takePendingShots()) {
-          const laser = new EnemyLaser(s.x, s.y, s.vx);
+          const laser = new EnemyLaser(s.x, s.y, s.vx, s.color, s.coreColor);
           this.lasers.push(laser);
           this.container.addChild(laser.container);
         }

@@ -5,15 +5,21 @@ export class EnemyLaser {
   dead = false;
   private vx: number;
 
-  constructor(x: number, y: number, vx = -10) {
+  constructor(
+    x: number,
+    y: number,
+    vx = -10,
+    color = 0x0044cc,
+    coreColor = 0x88ccff,
+  ) {
     this.vx = vx;
     this.container = new Container();
 
     const gfx = new Graphics();
     // Outer glow
-    gfx.rect(-14, -1.5, 28, 3).fill(0x0044cc);
+    gfx.rect(-14, -1.5, 28, 3).fill(color);
     // Bright core
-    gfx.rect(-14, -0.5, 28, 1).fill(0x88ccff);
+    gfx.rect(-14, -0.5, 28, 1).fill(coreColor);
 
     this.container.addChild(gfx);
     this.container.position.set(x, y);
