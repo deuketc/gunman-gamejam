@@ -1,10 +1,14 @@
 import { Application, Container, Graphics, Sprite } from "pixi.js";
 import { Input } from "../input/Input";
 import { Player } from "../entities/Player";
-import type { Platform } from "../entities/Platform";
+import type { Platform, Ladder } from "../entities/Platform";
 import { Bullet } from "../entities/projectiles/Bullet";
 import type { EnemyBase, Rect } from "../entities/enemies/EnemyBase";
-import { EnemyStatic, ENEMY_V1, ENEMY_V2 } from "../entities/enemies/EnemyStatic";
+import {
+  EnemyStatic,
+  ENEMY_V1,
+  ENEMY_V2,
+} from "../entities/enemies/EnemyStatic";
 import { EnemyDrone } from "../entities/enemies/EnemyDrone";
 import { EnemyLaser } from "../entities/projectiles/EnemyLaser";
 
@@ -22,6 +26,7 @@ export class GameScene {
   private screenH: number;
   private lastPlayerX = 0;
   private platforms: Platform[] = [];
+  private ladders: Ladder[] = [];
   private debugMode = false;
   private debugGfx: Graphics;
 
@@ -54,13 +59,17 @@ export class GameScene {
 
     this.platforms = [
       { x: 0, y: groundY - 230, w: 228 },
-      { x: 207, y: groundY - 110, w: 250 },
+      { x: 175, y: groundY - 110, w: 281 },
       { x: 316, y: groundY - 215, w: 134 },
       { x: 538, y: groundY - 230, w: 102 },
     ];
 
+    // Ladder connecting platform #1 (top-left) to platform #2 (middle)
+    this.ladders = [{ x: 181, y: groundY - 230, w: 20, h: 120 }];
+
     this.player = new Player(100, groundY, this.screenW, groundY);
     this.player.setPlatforms(this.platforms);
+    this.player.setLadders(this.ladders);
     this.lastPlayerX = 50;
     this.container.addChild(this.player.container);
 
@@ -86,7 +95,7 @@ export class GameScene {
       if (!e.dead) e.update(playerX, playerY, playerMoving);
 
     // Remove dead enemies that have removeOnDeath set (e.g. drone)
-    this.enemies = this.enemies.filter(e => {
+    this.enemies = this.enemies.filter((e) => {
       if (e.dead && e.removeOnDeath) {
         this.container.removeChild(e.container);
         return false;
@@ -98,7 +107,14 @@ export class GameScene {
     for (const e of this.enemies)
       if (!e.dead) {
         for (const s of e.takePendingShots()) {
-          const laser = new EnemyLaser(s.x, s.y, s.vx, s.vy ?? 0, s.color, s.coreColor);
+          const laser = new EnemyLaser(
+            s.x,
+            s.y,
+            s.vx,
+            s.vy ?? 0,
+            s.color,
+            s.coreColor,
+          );
           this.lasers.push(laser);
           this.container.addChild(laser.container);
         }
@@ -160,6 +176,12 @@ export class GameScene {
           .lineTo(p.x + p.w, p.y)
           .stroke({ color: 0x00ff44, width: 1 });
       }
+      for (const l of this.ladders) {
+        this.debugGfx
+          .rect(l.x, l.y, l.w, l.h)
+          .fill({ color: 0x00ffff, alpha: 0.15 })
+          .stroke({ color: 0x00ffff, width: 1 });
+      }
       for (const e of this.enemies) {
         const dz = e.detectionZone();
         const hb = e.hitbox();
@@ -188,13 +210,18 @@ export class GameScene {
           .fill({ color: 0xffff00, alpha: 0.1 })
           .stroke({ color: 0xffff00, width: 1 });
       }
-      // Player position crosshair
-      this.debugGfx
-        .moveTo(playerX - 4, playerY)
-        .lineTo(playerX + 4, playerY)
-        .moveTo(playerX, playerY - 4)
-        .lineTo(playerX, playerY + 4)
-        .stroke({ color: 0x00ff00, width: 1 });
+      // Player position crosshair — centred on hurtbox
+      if (!this.player.dead) {
+        const phb = this.player.hurtbox();
+        const cx = phb.x + phb.w / 2;
+        const cy = phb.y + phb.h / 2;
+        this.debugGfx
+          .moveTo(cx - 4, cy)
+          .lineTo(cx + 4, cy)
+          .moveTo(cx, cy - 4)
+          .lineTo(cx, cy + 4)
+          .stroke({ color: 0x00ff00, width: 1 });
+      }
     }
 
     Input.flush();

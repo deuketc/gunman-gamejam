@@ -347,16 +347,17 @@ export class EnemyStatic implements EnemyBase {
   detectionZone(): Rect {
     const x = this.container.x;
     const y = this.container.y;
+    const nearEdge = this.frameW / 2 - 30;
     if (this.facingLeft) {
       return {
-        x: x - this.frameW / 2 - this.alertDistance,
+        x: x - nearEdge - this.alertDistance,
         y: y - this.frameH,
         w: this.alertDistance,
         h: this.frameH,
       };
     }
     return {
-      x: x + this.frameW / 2,
+      x: x + nearEdge,
       y: y - this.frameH,
       w: this.alertDistance,
       h: this.frameH,

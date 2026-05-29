@@ -36,6 +36,7 @@ async function main() {
     "/assets/enemy-ani-ver2-death.png",
     "/assets/drone-ani-flying-left.png",
     "/assets/drone-ani-explodes-left.png",
+    "/assets/gunman-ani-ladder.png",
   ]);
 
   const game = new Game(app);

@@ -1,6 +1,6 @@
 import { AnimatedSprite, Assets, Container, Rectangle, Texture } from "pixi.js";
 import { Input } from "../input/Input";
-import type { Platform, Rect } from "./Platform";
+import type { Platform, Ladder, Rect } from "./Platform";
 
 type PlayerState =
   | "idle-left"
@@ -35,7 +35,8 @@ type PlayerState =
   | "fall-right"
   | "fall-left"
   | "fall-land-right"
-  | "fall-land-left";
+  | "fall-land-left"
+  | "ladder";
 
 interface PendingBullet {
   x: number;
@@ -78,6 +79,18 @@ const FALL_INTRO_FRAMES = 3; // frames 0-2: play then freeze while falling
 const FALL_LAND_FRAMES = 4; // frames 3-6: play on ground contact
 const FALL_ANIM_SPEED = 0.25;
 const FALL_Y_OFFSET = 32; // same standard offset as other 128px sprites
+
+const LADDER_PATH = "/assets/gunman-ani-ladder.png";
+const LADDER_FRAME_W = 128;
+const LADDER_FRAME_H = 128;
+const LADDER_FRAMES = 19;
+const LADDER_Y_OFFSET = 32; // standard 128px frame offset
+const LADDER_ANIM_SPEED = 0.2;
+const LADDER_ENTRY_END = 3; // last frame of grab animation (0-indexed)
+const LADDER_CLIMB_START = 5; // first frame of climb loop
+const LADDER_CLIMB_END = 18; // last frame of climb loop
+const LADDER_SPEED = 0.75; // px per tick while climbing
+const LADDER_SCRUB = 0.3; // animation frames advanced per tick of movement
 
 // Long jump (left / right jump with run-up animation)
 const LONG_JUMP_PATH = "/assets/gunman-ani-right-jump-long.png";
@@ -147,6 +160,10 @@ export class Player {
   private lastFacingLeft = false;
   private hangPlatformY = 0;
   private pullUpYOffset = PULL_UP_Y_OFFSET; // set per hang type so pull-up aligns correctly
+  private ladders: Ladder[] = [];
+  private activeLadder: Ladder | null = null;
+  private ladderFrameAccum = 0;
+  private ladderEntryDone = false;
 
   constructor(x: number, y: number, screenW: number, groundY: number) {
     this.screenW = screenW;
@@ -171,6 +188,7 @@ export class Player {
     const puR = Assets.get<Texture>(PULL_UP_PATH);
     const fallR = Assets.get<Texture>(FALL_PATH);
     const ljR = Assets.get<Texture>(LONG_JUMP_PATH);
+    const ladderSheet = Assets.get<Texture>(LADDER_PATH);
 
     const standR = new Texture({
       source: stand.source,
@@ -340,6 +358,13 @@ export class Player {
         FALL_FRAME_W,
         FALL_FRAME_H,
       ),
+      ladder: cropFrames(
+        ladderSheet,
+        0,
+        LADDER_FRAMES,
+        LADDER_FRAME_W,
+        LADDER_FRAME_H,
+      ),
     };
 
     this.sprite = new AnimatedSprite(this.textures["idle-front"]);
@@ -379,6 +404,16 @@ export class Player {
         this.isGrounded = false;
         this.velocityY = -LONG_JUMP_STRENGTH;
         this.velocityX = this.pendingJumpVX;
+      }
+
+      // Ladder entry: freeze at frame 3 then wait for climb input
+      if (
+        this.state === "ladder" &&
+        !this.ladderEntryDone &&
+        frame === LADDER_ENTRY_END
+      ) {
+        this.sprite.stop();
+        this.ladderEntryDone = true;
       }
     };
 
@@ -446,7 +481,8 @@ export class Player {
     this.sprite.stop();
     this.sprite.textures = this.textures[next];
     this.sprite.scale.x =
-      next.includes("-left") || (next === "idle-front" && this.lastFacingLeft)
+      next.includes("-left") ||
+      ((next === "idle-front" || next === "ladder") && this.lastFacingLeft)
         ? -1
         : 1;
     this.sprite.position.set(0, 0); // reset frame offset; overridden below for 128px sprites
@@ -538,6 +574,13 @@ export class Player {
       this.sprite.loop = false;
       this.sprite.currentFrame = PLATFORM_JUMP_FRAMES - 1; // frozen at dedicated hang frame
       // don't call play() — sprite stays still
+    } else if (next === "ladder") {
+      this.ladderEntryDone = false;
+      this.sprite.position.set(0, LADDER_Y_OFFSET);
+      this.sprite.animationSpeed = LADDER_ANIM_SPEED;
+      this.sprite.loop = false;
+      this.sprite.currentFrame = 0;
+      this.sprite.play(); // plays frames 0-3, stopped in onFrameChange at LADDER_ENTRY_END
     }
     // idle, shoot-ready: stopped at frame 0
   }
@@ -574,6 +617,9 @@ export class Player {
       this.state === "platform-jump-hang-right" ||
       this.state === "platform-jump-hang-left";
     const yShift = platformJumping ? -15 : 0;
+    if (this.state === "ladder") {
+      return { x: cx - 10, y: cy - 72, w: 20, h: 72 };
+    }
     if (!this.isGrounded) {
       return { x: cx - 10, y: cy - 52 + yShift, w: 20, h: 52 };
     }
@@ -582,6 +628,21 @@ export class Player {
 
   setPlatforms(platforms: Platform[]) {
     this.platforms = platforms;
+  }
+
+  setLadders(ladders: Ladder[]) {
+    this.ladders = ladders;
+  }
+
+  private enterLadder(ladder: Ladder) {
+    this.lastFacingLeft = this.facingLeft();
+    this.activeLadder = ladder;
+    this.isGrounded = false;
+    this.velocityX = 0;
+    this.velocityY = 0;
+    this.ladderFrameAccum = 0;
+    this.container.x = ladder.x + ladder.w / 2;
+    this.setState("ladder");
   }
 
   // Returns the highest floor surface at x that is at or below fromY.
@@ -597,7 +658,8 @@ export class Player {
   }
 
   private facingLeft(): boolean {
-    if (this.state === "idle-front") return this.lastFacingLeft;
+    if (this.state === "idle-front" || this.state === "ladder")
+      return this.lastFacingLeft;
     return this.state.endsWith("-left");
   }
 
@@ -659,6 +721,66 @@ export class Player {
 
     // --- AIRBORNE ---
     if (!this.isGrounded) {
+      // --- LADDER: climbing ---
+      if (this.state === "ladder") {
+        const l = this.activeLadder!;
+        this.container.x = l.x + l.w / 2; // pin to ladder centre
+
+        if (!this.ladderEntryDone) return; // wait for grab animation to finish
+
+        const down = Input.isAnyDown("ArrowDown", "KeyS");
+        const climbRange = LADDER_CLIMB_END - LADDER_CLIMB_START + 1; // 14 frames
+
+        // On first input after entry, jump into the climb frame range
+        if (this.sprite.currentFrame < LADDER_CLIMB_START) {
+          if (!turnKey && !down) return;
+          this.sprite.currentFrame = LADDER_CLIMB_START;
+        }
+
+        if (turnKey) {
+          this.container.y -= LADDER_SPEED;
+          this.ladderFrameAccum += LADDER_SCRUB;
+          if (this.ladderFrameAccum >= 1) {
+            this.ladderFrameAccum -= 1;
+            const offset =
+              (this.sprite.currentFrame - LADDER_CLIMB_START + 1) % climbRange;
+            this.sprite.currentFrame = LADDER_CLIMB_START + offset;
+          }
+          // Exit top — detection zone top meets upper platform
+          if (this.detectionZone().y <= l.y) {
+            this.hangPlatformY = l.y;
+            this.pullUpYOffset = PULL_UP_Y_OFFSET;
+            this.container.y = l.y + 67;
+            this.activeLadder = null;
+            this.setState(
+              this.lastFacingLeft
+                ? "platform-jump-hang-left"
+                : "platform-jump-hang-right",
+            );
+          }
+        } else if (down) {
+          this.container.y += LADDER_SPEED;
+          this.ladderFrameAccum -= LADDER_SCRUB;
+          if (this.ladderFrameAccum <= -1) {
+            this.ladderFrameAccum += 1;
+            const offset =
+              (((this.sprite.currentFrame - LADDER_CLIMB_START - 1) %
+                climbRange) +
+                climbRange) %
+              climbRange;
+            this.sprite.currentFrame = LADDER_CLIMB_START + offset;
+          }
+          // Exit bottom — feet reach lower platform
+          if (this.container.y >= l.y + l.h) {
+            this.container.y = l.y + l.h;
+            this.activeLadder = null;
+            this.isGrounded = true;
+            this.setState(this.lastFacingLeft ? "idle-left" : "idle-right");
+          }
+        }
+        return;
+      }
+
       // --- HANGING: frozen on platform underside ---
       if (
         this.state === "platform-jump-hang-right" ||
@@ -823,6 +945,22 @@ export class Player {
             : "platform-jump-right",
         );
         return;
+      }
+      // Ladder entry when fully turned (frame 2) and Up/W held
+      if (turnKey && this.sprite.currentFrame === TURN_FRAME_COUNT - 1) {
+        const dzCx = this.container.x;
+        const dzCy = this.container.y - 29;
+        for (const l of this.ladders) {
+          if (
+            dzCx >= l.x &&
+            dzCx <= l.x + l.w &&
+            dzCy >= l.y &&
+            dzCy <= l.y + l.h
+          ) {
+            this.enterLadder(l);
+            return;
+          }
+        }
       }
       if (!turnKey) this.startTurnBack();
       return;

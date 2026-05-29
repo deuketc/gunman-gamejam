@@ -12,7 +12,8 @@ const FLY_FRAMES     = 12;
 const DEATH_FRAMES   = 9;
 const FLY_SPEED      = 0.5;     // px per frame
 const PATROL_DIST    = 200;     // px each side from origin
-const DETECT_RADIUS  = 110;     // px radius around drone
+const DETECT_HALF_W  = 130;     // half-width of detection rectangle (full width 260px)
+const DETECT_HALF_H  = 65;      // half-height (50% of width)
 const SHOOT_INTERVAL = 300;     // 5 s at 60 fps
 const SHOOT_FIRST    = 60;      // 1 s delay before first shot on detection
 const LASER_SPEED    = 8;       // px per frame
@@ -118,23 +119,22 @@ export class EnemyDrone implements EnemyBase {
     };
   }
 
-  // Returns bounding square of detection circle for debug overlay
   detectionZone(): Rect {
     return {
-      x: this.container.x - DETECT_RADIUS,
-      y: this.container.y - DETECT_RADIUS,
-      w: DETECT_RADIUS * 2,
-      h: DETECT_RADIUS * 2,
+      x: this.container.x - DETECT_HALF_W,
+      y: this.container.y - DETECT_HALF_H,
+      w: DETECT_HALF_W * 2,
+      h: DETECT_HALF_H * 2,
     };
   }
 
   update(playerX: number, playerY: number, _playerMoving: boolean) {
     if (this.state === "dying") return;
 
-    // Radius-based detection
+    // Rectangle detection — use player centre, not feet
     const dx = playerX - this.container.x;
-    const dy = playerY - this.container.y;
-    const detected = Math.sqrt(dx * dx + dy * dy) <= DETECT_RADIUS;
+    const dy = (playerY - 29) - this.container.y;
+    const detected = Math.abs(dx) <= DETECT_HALF_W && Math.abs(dy) <= DETECT_HALF_H;
 
     if (detected) {
       // Face the player
@@ -145,7 +145,8 @@ export class EnemyDrone implements EnemyBase {
       this.shootTimer--;
       if (this.shootTimer <= 0) {
         this.shootTimer = SHOOT_INTERVAL;
-        const angle = Math.atan2(dy, dx);
+        const aimDy = (playerY - 29) - this.container.y; // aim at player centre, not feet
+        const angle = Math.atan2(aimDy, dx);
         this.pendingShots.push({
           x:         this.container.x,
           y:         this.container.y,
