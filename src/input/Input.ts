@@ -11,9 +11,10 @@ window.addEventListener('mousedown', () => { mouseDown = true; });
 window.addEventListener('mouseup', () => { mouseDown = false; });
 
 export const Input = {
-  isDown:        (code: string)       => keys.has(code),
-  isAnyDown:     (...codes: string[]) => codes.some((c) => keys.has(c)),
-  isMouseDown:   ()                   => mouseDown,
-  isJustPressed: (code: string)       => justPressed.has(code),
-  flush:         ()                   => justPressed.clear(),
+  isDown:           (code: string)       => keys.has(code),
+  isAnyDown:        (...codes: string[]) => codes.some((c) => keys.has(c)),
+  isAnyJustPressed: (...codes: string[]) => codes.some((c) => justPressed.has(c)),
+  isMouseDown:      ()                   => mouseDown,
+  isJustPressed:    (code: string)       => justPressed.has(code),
+  flush:            ()                   => justPressed.clear(),
 };

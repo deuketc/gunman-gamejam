@@ -11,9 +11,17 @@ import {
 } from "../entities/enemies/EnemyStatic";
 import { EnemyDrone } from "../entities/enemies/EnemyDrone";
 import { EnemyLaser } from "../entities/projectiles/EnemyLaser";
+import { Door } from "../entities/interactables/Door";
+import { Inventory } from "../entities/Inventory";
+import { GrenadeProjectile } from "../entities/projectiles/GrenadeProjectile";
+import { Explosion } from "../entities/Explosion";
 
 function pointInRect(px: number, py: number, r: Rect): boolean {
   return px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h;
+}
+
+function rectsOverlap(a: Rect, b: Rect): boolean {
+  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 }
 
 export class GameScene {
@@ -24,16 +32,22 @@ export class GameScene {
   private lasers: EnemyLaser[] = [];
   private screenW: number;
   private screenH: number;
+  private groundY = 0;
   private lastPlayerX = 0;
   private platforms: Platform[] = [];
   private ladders: Ladder[] = [];
+  private doors: Door[] = [];
+  private inventory!: Inventory;
+  private grenades: GrenadeProjectile[] = [];
+  private explosions: Explosion[] = [];
   private debugMode = false;
   private debugGfx: Graphics;
 
   constructor(app: Application) {
     this.screenW = app.screen.width;
     this.screenH = app.screen.height;
-    const groundY = this.screenH - 42;
+    this.groundY = this.screenH - 42;
+    const groundY = this.groundY;
     this.container = new Container();
 
     const bg = Sprite.from("/assets/background_01.png");
@@ -67,6 +81,11 @@ export class GameScene {
     // Ladder connecting platform #1 (top-left) to platform #2 (middle)
     this.ladders = [{ x: 181, y: groundY - 230, w: 20, h: 120 }];
 
+    const door = new Door(15, 214);
+    door.onOpen = () => this.inventory.addGrenade();
+    this.doors.push(door);
+    this.container.addChild(door.container);
+
     this.player = new Player(100, groundY, this.screenW, groundY);
     this.player.setPlatforms(this.platforms);
     this.player.setLadders(this.ladders);
@@ -76,6 +95,10 @@ export class GameScene {
     // Debug overlay always on top
     this.debugGfx = new Graphics();
     this.container.addChild(this.debugGfx);
+
+    // HUD — inventory sits above everything
+    this.inventory = new Inventory(this.screenW, this.screenH);
+    this.container.addChild(this.inventory.container);
   }
 
   update(dt: number) {
@@ -83,6 +106,18 @@ export class GameScene {
     if (Input.isJustPressed("Backquote")) this.debugMode = !this.debugMode;
 
     this.player.update(dt);
+
+    // Door interactions
+    if (!this.player.dead && this.player.grounded && Input.isAnyJustPressed("ArrowUp", "KeyW")) {
+      const px = this.player.container.x;
+      const py = this.player.container.y;
+      for (const d of this.doors) {
+        const iz = d.interactionZone();
+        if (px >= iz.x && px <= iz.x + iz.w && py >= iz.y && py <= iz.y + iz.h) {
+          d.interact();
+        }
+      }
+    }
 
     // When dead, pass off-screen coords so enemies lose detection and resume patrol
     const playerX = this.player.dead ? -9999 : this.player.container.x;
@@ -141,6 +176,65 @@ export class GameScene {
 
     // Dead enemies stay in the scene — no removal.
 
+    // Spawn grenades — only if inventory has one
+    for (const g of this.player.takePendingGrenades()) {
+      if (this.inventory.useGrenade()) {
+        const grenade = new GrenadeProjectile(g.x, g.y, g.facingLeft);
+        this.grenades.push(grenade);
+        this.container.addChild(grenade.container);
+      }
+    }
+
+    // Update grenades — physics then explosion on impact
+    for (const g of this.grenades) g.update(this.groundY, this.platforms);
+
+    // Grenade contact with enemies while in flight
+    for (const g of this.grenades) {
+      if (g.dead) continue;
+      const ghb = g.hitbox();
+      if (!ghb) continue;
+      for (const e of this.enemies) {
+        if (e.dead) continue;
+        if (rectsOverlap(ghb, e.hitbox())) {
+          if (e.hitByExplosion) e.hitByExplosion();
+          else e.hit();
+          g.detonateNow();
+          break;
+        }
+      }
+    }
+    this.grenades = this.grenades.filter((g) => {
+      if (!g.dead) return true;
+      this.container.removeChild(g.container);
+      if (g.exploded) {
+        const ex = new Explosion(g.container.x, g.container.y);
+        this.explosions.push(ex);
+        this.container.addChild(ex.container);
+        // Blast damage — hit enemies within radius
+        const r = g.blastRadius();
+        for (const e of this.enemies) {
+          if (e.dead) continue;
+          const hb = e.hitbox();
+          const ex_x = g.container.x;
+          const ex_y = g.container.y;
+          const cx = hb.x + hb.w / 2;
+          const cy = hb.y + hb.h / 2;
+          if (Math.sqrt((cx - ex_x) ** 2 + (cy - ex_y) ** 2) <= r) {
+            if (e.hitByExplosion) e.hitByExplosion();
+            else e.hit();
+          }
+        }
+      }
+      return false;
+    });
+
+    // Clean up finished explosions
+    this.explosions = this.explosions.filter((ex) => {
+      if (!ex.dead) return true;
+      this.container.removeChild(ex.container);
+      return false;
+    });
+
     // Spawn player bullets
     for (const b of this.player.takePendingBullets()) {
       const bullet = new Bullet(b.x, b.y, b.angle);
@@ -182,6 +276,13 @@ export class GameScene {
           .fill({ color: 0x00ffff, alpha: 0.15 })
           .stroke({ color: 0x00ffff, width: 1 });
       }
+      for (const d of this.doors) {
+        const iz = d.interactionZone();
+        this.debugGfx
+          .rect(iz.x, iz.y, iz.w, iz.h)
+          .fill({ color: 0xff00ff, alpha: 0.15 })
+          .stroke({ color: 0xff00ff, width: 1 });
+      }
       for (const e of this.enemies) {
         const dz = e.detectionZone();
         const hb = e.hitbox();
@@ -209,6 +310,24 @@ export class GameScene {
           .rect(pdz.x, pdz.y, pdz.w, pdz.h)
           .fill({ color: 0xffff00, alpha: 0.1 })
           .stroke({ color: 0xffff00, width: 1 });
+      }
+      // Grenade hitboxes — orange
+      for (const g of this.grenades) {
+        const ghb = g.hitbox();
+        if (ghb) {
+          this.debugGfx
+            .rect(ghb.x, ghb.y, ghb.w, ghb.h)
+            .fill({ color: 0xff8800, alpha: 0.4 })
+            .stroke({ color: 0xff8800, width: 1 });
+        }
+      }
+      // Explosion hitboxes — red-orange
+      for (const ex of this.explosions) {
+        const ehb = ex.hitbox();
+        this.debugGfx
+          .rect(ehb.x, ehb.y, ehb.w, ehb.h)
+          .fill({ color: 0xff4400, alpha: 0.2 })
+          .stroke({ color: 0xff4400, width: 1 });
       }
       // Player position crosshair — centred on hurtbox
       if (!this.player.dead) {

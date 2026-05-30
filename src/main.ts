@@ -37,6 +37,11 @@ async function main() {
     "/assets/drone-ani-flying-left.png",
     "/assets/drone-ani-explodes-left.png",
     "/assets/gunman-ani-ladder.png",
+    "/assets/gunman-002-ani-right-throw-grenade.png",
+    "/assets/door-ground-ani-open-.png",
+    "/assets/enemy-ani-stand-facing-granade-explotion.png",
+    "/assets/granade_inventory.png",
+    "https://pixijs.com/assets/spritesheet/mc.json",
   ]);
 
   const game = new Game(app);

@@ -36,12 +36,20 @@ type PlayerState =
   | "fall-left"
   | "fall-land-right"
   | "fall-land-left"
-  | "ladder";
+  | "ladder"
+  | "throw-right"
+  | "throw-left";
 
 interface PendingBullet {
   x: number;
   y: number;
   angle: number;
+}
+
+interface PendingGrenade {
+  x: number;
+  y: number;
+  facingLeft: boolean;
 }
 
 const DEATH_PATH = "/assets/gunman-ani-stand-death-right.png";
@@ -79,6 +87,11 @@ const FALL_INTRO_FRAMES = 3; // frames 0-2: play then freeze while falling
 const FALL_LAND_FRAMES = 4; // frames 3-6: play on ground contact
 const FALL_ANIM_SPEED = 0.25;
 const FALL_Y_OFFSET = 32; // same standard offset as other 128px sprites
+
+const THROW_PATH        = "/assets/gunman-002-ani-right-throw-grenade.png";
+const THROW_FRAMES      = 17;
+const THROW_SPAWN_FRAME = 15;
+const THROW_ANIM_SPEED  = 0.2;
 
 const LADDER_PATH = "/assets/gunman-ani-ladder.png";
 const LADDER_FRAME_W = 128;
@@ -156,6 +169,7 @@ export class Player {
   private shootWasDown = false;
   private shootHoldTimer = 0;
   private pendingBullets: PendingBullet[] = [];
+  private pendingGrenades: PendingGrenade[] = [];
   private idleTimer = 0;
   private lastFacingLeft = false;
   private hangPlatformY = 0;
@@ -188,6 +202,7 @@ export class Player {
     const puR = Assets.get<Texture>(PULL_UP_PATH);
     const fallR = Assets.get<Texture>(FALL_PATH);
     const ljR = Assets.get<Texture>(LONG_JUMP_PATH);
+    const throwR      = Assets.get<Texture>(THROW_PATH);
     const ladderSheet = Assets.get<Texture>(LADDER_PATH);
 
     const standR = new Texture({
@@ -365,6 +380,8 @@ export class Player {
         LADDER_FRAME_W,
         LADDER_FRAME_H,
       ),
+      "throw-right": cropFrames(throwR, 0, THROW_FRAMES),
+      "throw-left":  cropFrames(throwR, 0, THROW_FRAMES),
     };
 
     this.sprite = new AnimatedSprite(this.textures["idle-front"]);
@@ -404,6 +421,19 @@ export class Player {
         this.isGrounded = false;
         this.velocityY = -LONG_JUMP_STRENGTH;
         this.velocityX = this.pendingJumpVX;
+      }
+
+      // Throw: spawn grenade at frame 15
+      if (
+        (this.state === "throw-right" || this.state === "throw-left") &&
+        frame === THROW_SPAWN_FRAME
+      ) {
+        const left = this.state === "throw-left";
+        this.pendingGrenades.push({
+          x: this.container.x + (left ? -20 : 20),
+          y: this.container.y - 40,
+          facingLeft: left,
+        });
       }
 
       // Ladder entry: freeze at frame 3 then wait for climb input
@@ -456,6 +486,12 @@ export class Player {
           this.setState("idle-right");
           break;
         case "fall-land-left":
+          this.setState("idle-left");
+          break;
+        case "throw-right":
+          this.setState("idle-right");
+          break;
+        case "throw-left":
           this.setState("idle-left");
           break;
         case "platform-pull-up-right":
@@ -574,6 +610,11 @@ export class Player {
       this.sprite.loop = false;
       this.sprite.currentFrame = PLATFORM_JUMP_FRAMES - 1; // frozen at dedicated hang frame
       // don't call play() — sprite stays still
+    } else if (next === "throw-right" || next === "throw-left") {
+      this.sprite.animationSpeed = THROW_ANIM_SPEED;
+      this.sprite.loop = false;
+      this.sprite.currentFrame = 0;
+      this.sprite.play();
     } else if (next === "ladder") {
       this.ladderEntryDone = false;
       this.sprite.position.set(0, LADDER_Y_OFFSET);
@@ -598,6 +639,8 @@ export class Player {
     this.sprite.currentFrame = 0;
     this.sprite.play();
   }
+
+  get grounded(): boolean { return this.isGrounded; }
 
   hurtbox(): Rect {
     const cx = this.container.x;
@@ -709,8 +752,15 @@ export class Player {
     return out;
   }
 
+  takePendingGrenades(): PendingGrenade[] {
+    const out = this.pendingGrenades.slice();
+    this.pendingGrenades = [];
+    return out;
+  }
+
   update(_dt: number) {
     if (this.dead) return;
+
     const left = Input.isAnyDown("ArrowLeft", "KeyA");
     const right = Input.isAnyDown("ArrowRight", "KeyD");
     const jump = Input.isDown("Space");
@@ -906,7 +956,9 @@ export class Player {
       this.state === "jump-right" || // long jump startup (isGrounded, pre-launch)
       this.state === "jump-left" ||
       this.state === "jump-land-right" ||
-      this.state === "jump-land-left"
+      this.state === "jump-land-left" ||
+      this.state === "throw-right" ||
+      this.state === "throw-left"
     ) {
       return;
     }
@@ -996,6 +1048,11 @@ export class Player {
       this.setState(
         this.facingLeft() ? "shoot-cycle-left" : "shoot-cycle-right",
       );
+      return;
+    }
+
+    if (Input.isJustPressed("KeyG")) {
+      this.setState(this.facingLeft() ? "throw-left" : "throw-right");
       return;
     }
 

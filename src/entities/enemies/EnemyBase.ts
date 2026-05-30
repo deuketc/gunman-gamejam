@@ -17,6 +17,7 @@ export interface EnemyBase {
   dead: boolean;
   readonly removeOnDeath?: boolean; // if true, GameScene removes container when dead
   hit(): void;
+  hitByExplosion?(): void;
   hitbox(): Rect;
   detectionZone(): Rect;
   update(playerX: number, playerY: number, playerMoving: boolean): void;

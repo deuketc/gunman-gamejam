@@ -7,7 +7,8 @@ type EnemyState =
   | "idle"
   | "alert"
   | "shoot"
-  | "dying";
+  | "dying"
+  | "grenade-dying";
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -33,6 +34,12 @@ export interface EnemyStaticConfig {
   shootFrameStart: number;  // 0-indexed first frame of shoot loop on raise sheet
   shootFrameCount: number;
   deathFrameCount: number;
+
+  // Grenade death — optional, falls back to regular death if omitted
+  grenadePath?:       string;
+  grenadeFrameW?:     number;
+  grenadeFrameH?:     number;
+  grenadeFrameCount?: number;
 
   // Laser colours — optional, fall back to default blue
   laserColor?: number;
@@ -68,8 +75,12 @@ export const ENEMY_V1: EnemyStaticConfig = {
   shootFrameStart: 7,  // frame 7: first shoot frame
   shootFrameCount: 3,  // frames 7–9
   deathFrameCount: 16,
-  barrelOffsetY:   -47, // 5 px higher than default (-42)
-  shootDelay:      60, // ~1 s pause at frame 9 before shooting again
+  barrelOffsetY:      -47, // 5 px higher than default (-42)
+  shootDelay:         60,  // ~1 s pause at frame 9 before shooting again
+  grenadePath:        "/assets/enemy-ani-stand-facing-granade-explotion.png",
+  grenadeFrameW:      128,
+  grenadeFrameH:      120,
+  grenadeFrameCount:  13,
 };
 
 export const ENEMY_V2: EnemyStaticConfig = {
@@ -140,6 +151,7 @@ export class EnemyStatic implements EnemyBase {
     alert: Texture[];
     shoot: Texture[];
     dying: Texture[];
+    grenadeDying: Texture[] | null;
   };
   private pendingShots: PendingShot[] = [];
 
@@ -187,10 +199,11 @@ export class EnemyStatic implements EnemyBase {
     this.shootFireFrame = config.shootFireFrame ?? 1;
     this.shootDelay     = config.shootDelay ?? 0;
 
-    const idleSheet  = Assets.get<Texture>(config.idlePath);
-    const walkSheet  = Assets.get<Texture>(config.walkPath);
-    const raiseSheet = Assets.get<Texture>(config.raisePath);
-    const deathSheet = Assets.get<Texture>(config.deathPath);
+    const idleSheet    = Assets.get<Texture>(config.idlePath);
+    const walkSheet    = Assets.get<Texture>(config.walkPath);
+    const raiseSheet   = Assets.get<Texture>(config.raisePath);
+    const deathSheet   = Assets.get<Texture>(config.deathPath);
+    const grenadeSheet = config.grenadePath ? Assets.get<Texture>(config.grenadePath) : null;
 
     this.textures = {
       idle:  cropFrames(idleSheet,  0,                      config.idleFrameCount,  config.frameW,      config.frameH),
@@ -198,6 +211,9 @@ export class EnemyStatic implements EnemyBase {
       alert: cropFrames(raiseSheet, 0,                      config.alertFrameCount, config.frameW,      config.frameH),
       shoot: cropFrames(raiseSheet, config.shootFrameStart, config.shootFrameCount, config.frameW,      config.frameH),
       dying: cropFrames(deathSheet, 0,                      config.deathFrameCount, config.deathFrameW, config.deathFrameH),
+      grenadeDying: grenadeSheet
+        ? cropFrames(grenadeSheet, 0, config.grenadeFrameCount!, config.grenadeFrameW!, config.grenadeFrameH!)
+        : null,
     };
 
     this.state = config.startWalkRight ? "walk-right" : "walk-left";
@@ -222,6 +238,10 @@ export class EnemyStatic implements EnemyBase {
           coreColor: this.laserCoreColor,
         });
       }
+      if (this.state === "grenade-dying" && frame === 12) {
+        this.sprite.stop();
+        this.dead = true;
+      }
     };
 
     this.sprite.onComplete = () => {
@@ -235,7 +255,7 @@ export class EnemyStatic implements EnemyBase {
           this.sprite.currentFrame = 0;
           this.sprite.play();
         }
-      } else if (this.state === "dying") {
+      } else if (this.state === "dying" || this.state === "grenade-dying") {
         this.dead = true;
       }
     };
@@ -315,6 +335,16 @@ export class EnemyStatic implements EnemyBase {
         this.sprite.currentFrame = 0;
         this.sprite.play();
         break;
+
+      case "grenade-dying":
+        this.sprite.scale.x = 1;
+        this.sprite.position.set(0, 40); // 128x120 frame — slightly more offset
+        this.sprite.textures = this.textures.grenadeDying!;
+        this.sprite.animationSpeed = this.animSpeed;
+        this.sprite.loop = false;
+        this.sprite.currentFrame = 0;
+        this.sprite.play();
+        break;
     }
   }
 
@@ -331,8 +361,17 @@ export class EnemyStatic implements EnemyBase {
   // ─── EnemyBase interface ──────────────────────────────────────────────────
 
   hit() {
-    if (this.state === "dying") return;
+    if (this.state === "dying" || this.state === "grenade-dying") return;
     this.setState("dying");
+  }
+
+  hitByExplosion() {
+    if (this.state === "dying" || this.state === "grenade-dying") return;
+    if (this.textures.grenadeDying) {
+      this.setState("grenade-dying");
+    } else {
+      this.setState("dying");
+    }
   }
 
   hitbox(): Rect {
@@ -365,7 +404,7 @@ export class EnemyStatic implements EnemyBase {
   }
 
   update(playerX: number, playerY: number, _playerMoving: boolean) {
-    if (this.state === "dying") return;
+    if (this.state === "dying" || this.state === "grenade-dying") return;
 
     // Shoot delay countdown — resume animation once timer expires
     if (this.shootDelayTimer > 0) {
