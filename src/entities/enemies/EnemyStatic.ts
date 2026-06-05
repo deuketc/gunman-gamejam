@@ -8,7 +8,8 @@ type EnemyState =
   | "alert"
   | "shoot"
   | "dying"
-  | "grenade-dying";
+  | "grenade-dying"
+  | "stumble";
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -34,6 +35,13 @@ export interface EnemyStaticConfig {
   shootFrameStart: number;  // 0-indexed first frame of shoot loop on raise sheet
   shootFrameCount: number;
   deathFrameCount: number;
+
+  // Hit points before death (default 1)
+  hitPoints?: number;
+
+  // Stumble animation on non-lethal hit — optional
+  stumblePath?:       string;
+  stumbleFrameCount?: number;
 
   // Grenade death — optional, falls back to regular death if omitted
   grenadePath?:       string;
@@ -75,8 +83,11 @@ export const ENEMY_V1: EnemyStaticConfig = {
   shootFrameStart: 7,  // frame 7: first shoot frame
   shootFrameCount: 3,  // frames 7–9
   deathFrameCount: 16,
-  barrelOffsetY:      -47, // 5 px higher than default (-42)
-  shootDelay:         60,  // ~1 s pause at frame 9 before shooting again
+  barrelOffsetY:      -47,
+  shootDelay:         60,
+  hitPoints:          3,
+  stumblePath:        "/assets/enemy-ani-stand-shot-stumble-left.png",
+  stumbleFrameCount:  4,
   grenadePath:        "/assets/enemy-ani-stand-facing-granade-explotion.png",
   grenadeFrameW:      128,
   grenadeFrameH:      120,
@@ -101,9 +112,12 @@ export const ENEMY_V2: EnemyStaticConfig = {
   startWalkRight:  true,
   patrolDistance:  100, // shorter than default (200) to stay on platform
   idleTicks:       600, // 10 s (default 5 s + 5 s extra)
-  shootDelay:      90,  // ~1.5 s pause between shoot loops
-  laserColor:      0xcc0000,
-  laserCoreColor:  0xff8888,
+  shootDelay:         90,
+  hitPoints:          3,
+  stumblePath:        "/assets/enemy-ani-stand-shot-stumble-left.png",
+  stumbleFrameCount:  4,
+  laserColor:         0xcc0000,
+  laserCoreColor:     0xff8888,
 };
 
 // ─── Behaviour defaults ───────────────────────────────────────────────────────
@@ -152,7 +166,10 @@ export class EnemyStatic implements EnemyBase {
     shoot: Texture[];
     dying: Texture[];
     grenadeDying: Texture[] | null;
+    stumble: Texture[] | null;
   };
+  private health: number;
+  private enraged = false;
   private pendingShots: PendingShot[] = [];
 
   private originX: number;
@@ -204,6 +221,7 @@ export class EnemyStatic implements EnemyBase {
     const raiseSheet   = Assets.get<Texture>(config.raisePath);
     const deathSheet   = Assets.get<Texture>(config.deathPath);
     const grenadeSheet = config.grenadePath ? Assets.get<Texture>(config.grenadePath) : null;
+    const stumbleSheet = config.stumblePath ? Assets.get<Texture>(config.stumblePath) : null;
 
     this.textures = {
       idle:  cropFrames(idleSheet,  0,                      config.idleFrameCount,  config.frameW,      config.frameH),
@@ -214,7 +232,12 @@ export class EnemyStatic implements EnemyBase {
       grenadeDying: grenadeSheet
         ? cropFrames(grenadeSheet, 0, config.grenadeFrameCount!, config.grenadeFrameW!, config.grenadeFrameH!)
         : null,
+      stumble: stumbleSheet
+        ? cropFrames(stumbleSheet, 0, config.stumbleFrameCount ?? 4, config.frameW, config.frameH)
+        : null,
     };
+
+    this.health = config.hitPoints ?? 1;
 
     this.state = config.startWalkRight ? "walk-right" : "walk-left";
     this.facingLeft = !config.startWalkRight;
@@ -257,6 +280,8 @@ export class EnemyStatic implements EnemyBase {
         }
       } else if (this.state === "dying" || this.state === "grenade-dying") {
         this.dead = true;
+      } else if (this.state === "stumble") {
+        this.resumePatrol();
       }
     };
 
@@ -326,6 +351,15 @@ export class EnemyStatic implements EnemyBase {
         this.sprite.play();
         break;
 
+      case "stumble":
+        this.applyFacing();
+        this.sprite.textures = this.textures.stumble!;
+        this.sprite.animationSpeed = this.animSpeed;
+        this.sprite.loop = false;
+        this.sprite.currentFrame = 0;
+        this.sprite.play();
+        break;
+
       case "dying":
         this.sprite.scale.x = 1;
         this.sprite.position.set(0, 32);
@@ -361,8 +395,14 @@ export class EnemyStatic implements EnemyBase {
   // ─── EnemyBase interface ──────────────────────────────────────────────────
 
   hit() {
-    if (this.state === "dying" || this.state === "grenade-dying") return;
-    this.setState("dying");
+    if (this.state === "dying" || this.state === "grenade-dying" || this.state === "stumble") return;
+    this.health--;
+    this.enraged = true; // detection goes full-screen from first hit onward
+    if (this.health <= 0) {
+      this.setState("dying");
+    } else if (this.textures.stumble) {
+      this.setState("stumble");
+    }
   }
 
   hitByExplosion() {
@@ -384,6 +424,9 @@ export class EnemyStatic implements EnemyBase {
   }
 
   detectionZone(): Rect {
+    if (this.enraged) {
+      return { x: -2000, y: -2000, w: 4000, h: 4000 };
+    }
     const x = this.container.x;
     const y = this.container.y;
     const nearEdge = this.frameW / 2 - 30;
@@ -404,7 +447,7 @@ export class EnemyStatic implements EnemyBase {
   }
 
   update(playerX: number, playerY: number, _playerMoving: boolean) {
-    if (this.state === "dying" || this.state === "grenade-dying") return;
+    if (this.state === "dying" || this.state === "grenade-dying" || this.state === "stumble") return;
 
     // Shoot delay countdown — resume animation once timer expires
     if (this.shootDelayTimer > 0) {
