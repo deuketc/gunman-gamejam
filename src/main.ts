@@ -5,8 +5,8 @@ import { Game } from "./Game";
 async function main() {
   const app = new Application();
   await app.init({
-    width: 640,
-    height: 360,
+    width: 1280,
+    height: 720,
     backgroundColor: 0x050510,
     antialias: true,
   });
@@ -14,11 +14,11 @@ async function main() {
   document.body.appendChild(app.canvas);
 
   await Assets.load([
-    "/assets/background_01.png",
-    "/assets/gunman-stand-left-right.png",
-    "/assets/gunman-ani-stand-shutgun-walk-right.png",
-    "/assets/gunman-ani-stand-shutgun-shoot-right.png",
-    "/assets/gunman-ani-stand-shutgun-idle-right.png",
+    "/assets/background_01_720.png",
+    "/assets/player-static-right.png",
+    "/assets/player-ani-walk-right.png",
+    "/assets/player-ani-shoot-right.png",
+    "/assets/player-ani-idle-right.png",
     "/assets/enemy-static-stand-facing-with-gun.png",
     "/assets/enemy-ani-walk-with-gun-left.png",
     "/assets/enemy-ani-stand-facing-idle.png",

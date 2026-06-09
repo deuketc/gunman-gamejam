@@ -56,10 +56,23 @@ const DEATH_PATH = "/assets/gunman-ani-stand-death-right.png";
 const DEATH_FRAME_W = 128;
 const DEATH_FRAME_H = 128;
 const DEATH_FRAME_COUNT = 15;
-const STAND_PATH = "/assets/gunman-stand-left-right.png";
-const WALK_R_PATH = "/assets/gunman-ani-stand-shutgun-walk-right.png";
-const SHOOT_R_PATH = "/assets/gunman-ani-stand-shutgun-shoot-right.png";
-const IDLE_FRONT_PATH = "/assets/gunman-ani-stand-shutgun-idle-right.png";
+const STAND_PATH = "/assets/player-static-right.png";
+const STAND_FRAME_W = 128;
+const STAND_FRAME_H = 128;
+const STAND_Y_OFFSET = 7;
+const WALK_R_PATH = "/assets/player-ani-walk-right.png";
+const WALK_FRAME_W = 128;
+const WALK_FRAME_H = 128;
+const WALK_Y_OFFSET = 7;
+const WALK_LOOP_START = 3; // first frame of the loop portion
+const SHOOT_R_PATH = "/assets/player-ani-shoot-right.png";
+const SHOOT_FRAME_W = 128;
+const SHOOT_FRAME_H = 128;
+const SHOOT_Y_OFFSET = 7;
+const IDLE_FRONT_PATH = "/assets/player-ani-idle-right.png";
+const IDLE_FRONT_FRAME_W = 128;
+const IDLE_FRONT_FRAME_H = 128;
+const IDLE_FRONT_Y_OFFSET = 7;
 const TURN_R_PATH = "/assets/gunman-ani-stand-shutgun-turn-around-right.png";
 const TURN_FRAME_COUNT = 3;
 const TURN_ANIM_SPEED = 0.2;
@@ -71,7 +84,7 @@ const PLATFORM_JUMP_FRAMES = 9;
 const PLATFORM_JUMP_LAUNCH_FRAME = 6; // 0-indexed: physics fire here
 const PLATFORM_JUMP_STARTUP_COUNT = 6; // frames 0-5 play while grounded
 const PLATFORM_JUMP_ANIM_SPEED = 0.2;
-const PLATFORM_JUMP_STRENGTH = 5.5; // slightly lower than normal jump
+const PLATFORM_JUMP_STRENGTH = 11; // slightly lower than normal jump
 const PLATFORM_JUMP_Y_OFFSET = 32; // shift 128px frame down to align feet with ground
 const PULL_UP_PATH =
   "/assets/gunman-ani-stand-shutgun-pull-up-to-platform-right.png";
@@ -88,10 +101,10 @@ const FALL_LAND_FRAMES = 4; // frames 3-6: play on ground contact
 const FALL_ANIM_SPEED = 0.25;
 const FALL_Y_OFFSET = 32; // same standard offset as other 128px sprites
 
-const THROW_PATH        = "/assets/gunman-002-ani-right-throw-grenade.png";
-const THROW_FRAMES      = 17;
+const THROW_PATH = "/assets/gunman-002-ani-right-throw-grenade.png";
+const THROW_FRAMES = 17;
 const THROW_SPAWN_FRAME = 15;
-const THROW_ANIM_SPEED  = 0.2;
+const THROW_ANIM_SPEED = 0.2;
 
 const LADDER_PATH = "/assets/gunman-ani-ladder.png";
 const LADDER_FRAME_W = 128;
@@ -102,7 +115,7 @@ const LADDER_ANIM_SPEED = 0.2;
 const LADDER_ENTRY_END = 3; // last frame of grab animation (0-indexed)
 const LADDER_CLIMB_START = 5; // first frame of climb loop
 const LADDER_CLIMB_END = 18; // last frame of climb loop
-const LADDER_SPEED = 0.75; // px per tick while climbing
+const LADDER_SPEED = 1.5; // px per tick while climbing
 const LADDER_SCRUB = 0.3; // animation frames advanced per tick of movement
 
 // Long jump (left / right jump with run-up animation)
@@ -115,23 +128,24 @@ const LONG_JUMP_LAND_START = 8; // frames 8–10: cooldown on landing
 const LONG_JUMP_LAND_FRAMES = 3;
 const LONG_JUMP_ANIM_SPEED = 0.2;
 const LONG_JUMP_Y_OFFSET = 32; // standard 128px offset
-const LONG_JUMP_STRENGTH = 5;
+const LONG_JUMP_STRENGTH = 10;
 const LONG_JUMP_HANG_Y_OFFSET = 47; // sprite offset when hanging after a long jump (container.y = p.y + 52)
 const LONG_JUMP_PULL_UP_Y_OFFSET = 28; // sprite offset for pull-up animation from long-jump hang // slightly less height than platform jump
-const LONG_JUMP_SPEED_X = 3; // more horizontal range than old jump (was 2)
+const LONG_JUMP_SPEED_X = 6; // more horizontal range than old jump (was 2)
 
-const IDLE_FRONT_FRAMES = 17;
+const IDLE_FRONT_FRAMES = 21;
 const IDLE_TRIGGER_FRAMES = 240; // 4 seconds at 60 fps
 const IDLE_ANIM_SPEED = 0.1; // relaxed pace
 const FRAME_W = 64;
 const FRAME_H = 64;
-const WALK_FRAMES = 9;
-const SHOOT_CYCLE_FRAMES = 6; // frames 1–6  (0-indexed: 0–5)
-const SHOOT_LOWER_FRAMES = 4; // frames 7–10 (0-indexed: 6–9)
-const SHOOT_FIRE_FRAME = 3; // 0-indexed = frame 4 (1-indexed) — bullet spawns here
-const MOVE_SPEED = 1;
-const GRAVITY = 0.3;
-const WALK_ANIM_SPEED = 0.18;
+const WALK_FRAMES = 17;
+const SHOOT_CYCLE_FRAMES = 19; // frames 0–18 (raise + fire + reload)
+const SHOOT_LOWER_START = 19; // frames 19–23: put-away
+const SHOOT_LOWER_FRAMES = 5;
+const SHOOT_FIRE_FRAME = 5; // 0-indexed: bullet spawns here
+const MOVE_SPEED = 2;
+const GRAVITY = 0.6;
+const WALK_ANIM_SPEED = 0.3;
 const SHOOT_ANIM_SPEED = 0.25;
 const SHOOT_HOLD_FRAMES = 90; // idle frames before gun auto-lowers
 
@@ -202,26 +216,32 @@ export class Player {
     const puR = Assets.get<Texture>(PULL_UP_PATH);
     const fallR = Assets.get<Texture>(FALL_PATH);
     const ljR = Assets.get<Texture>(LONG_JUMP_PATH);
-    const throwR      = Assets.get<Texture>(THROW_PATH);
+    const throwR = Assets.get<Texture>(THROW_PATH);
     const ladderSheet = Assets.get<Texture>(LADDER_PATH);
 
     const standR = new Texture({
       source: stand.source,
-      frame: new Rectangle(0, 0, FRAME_W, FRAME_H),
+      frame: new Rectangle(0, 0, STAND_FRAME_W, STAND_FRAME_H),
     });
     // Ready frame = frame 0 of the shoot sheet (gun fully raised, waiting to fire)
     const readyR = new Texture({
       source: sR.source,
-      frame: new Rectangle(0, 0, FRAME_W, FRAME_H),
+      frame: new Rectangle(18 * SHOOT_FRAME_W, 0, SHOOT_FRAME_W, SHOOT_FRAME_H),
     });
 
     // Left states reuse right-facing textures — the sprite is flipped via scale.x = -1
     this.textures = {
       "idle-right": [standR],
       "idle-left": [standR],
-      "idle-front": cropFrames(idleF, 0, IDLE_FRONT_FRAMES),
-      "walk-right": cropFrames(wR, 0, WALK_FRAMES),
-      "walk-left": cropFrames(wR, 0, WALK_FRAMES),
+      "idle-front": cropFrames(
+        idleF,
+        0,
+        IDLE_FRONT_FRAMES,
+        IDLE_FRONT_FRAME_W,
+        IDLE_FRONT_FRAME_H,
+      ),
+      "walk-right": cropFrames(wR, 0, WALK_FRAMES, WALK_FRAME_W, WALK_FRAME_H),
+      "walk-left": cropFrames(wR, 0, WALK_FRAMES, WALK_FRAME_W, WALK_FRAME_H),
       // Long jump: frames 0–7 cover startup (0–1) + air (2–7)
       "jump-right": cropFrames(
         ljR,
@@ -267,19 +287,35 @@ export class Player {
         LONG_JUMP_FRAME_W,
         LONG_JUMP_FRAME_H,
       ),
-      "shoot-cycle-right": cropFrames(sR, 0, SHOOT_CYCLE_FRAMES),
-      "shoot-cycle-left": cropFrames(sR, 0, SHOOT_CYCLE_FRAMES),
+      "shoot-cycle-right": cropFrames(
+        sR,
+        0,
+        SHOOT_CYCLE_FRAMES,
+        SHOOT_FRAME_W,
+        SHOOT_FRAME_H,
+      ),
+      "shoot-cycle-left": cropFrames(
+        sR,
+        0,
+        SHOOT_CYCLE_FRAMES,
+        SHOOT_FRAME_W,
+        SHOOT_FRAME_H,
+      ),
       "shoot-ready-right": [readyR],
       "shoot-ready-left": [readyR],
       "shoot-lower-right": cropFrames(
         sR,
-        SHOOT_CYCLE_FRAMES,
+        SHOOT_LOWER_START,
         SHOOT_LOWER_FRAMES,
+        SHOOT_FRAME_W,
+        SHOOT_FRAME_H,
       ),
       "shoot-lower-left": cropFrames(
         sR,
-        SHOOT_CYCLE_FRAMES,
+        SHOOT_LOWER_START,
         SHOOT_LOWER_FRAMES,
+        SHOOT_FRAME_W,
+        SHOOT_FRAME_H,
       ),
       "turn-right": cropFrames(turnR, 0, TURN_FRAME_COUNT),
       "turn-right-back": [...cropFrames(turnR, 0, TURN_FRAME_COUNT)].reverse(),
@@ -381,11 +417,12 @@ export class Player {
         LADDER_FRAME_H,
       ),
       "throw-right": cropFrames(throwR, 0, THROW_FRAMES),
-      "throw-left":  cropFrames(throwR, 0, THROW_FRAMES),
+      "throw-left": cropFrames(throwR, 0, THROW_FRAMES),
     };
 
     this.sprite = new AnimatedSprite(this.textures["idle-front"]);
     this.sprite.anchor.set(0.5, 1);
+    this.sprite.position.set(0, IDLE_FRONT_Y_OFFSET);
     this.sprite.animationSpeed = IDLE_ANIM_SPEED;
     this.sprite.loop = true;
     this.sprite.play();
@@ -488,6 +525,11 @@ export class Player {
         case "fall-land-left":
           this.setState("idle-left");
           break;
+        case "walk-right":
+        case "walk-left":
+          this.sprite.currentFrame = WALK_LOOP_START;
+          this.sprite.play();
+          break;
         case "throw-right":
           this.setState("idle-right");
           break;
@@ -523,13 +565,15 @@ export class Player {
         : 1;
     this.sprite.position.set(0, 0); // reset frame offset; overridden below for 128px sprites
 
-    if (
-      next === "walk-left" ||
-      next === "walk-right" ||
-      next === "idle-front"
-    ) {
-      this.sprite.animationSpeed =
-        next === "idle-front" ? IDLE_ANIM_SPEED : WALK_ANIM_SPEED;
+    if (next === "walk-left" || next === "walk-right") {
+      this.sprite.position.set(0, WALK_Y_OFFSET);
+      this.sprite.animationSpeed = WALK_ANIM_SPEED;
+      this.sprite.loop = false; // onComplete restarts from WALK_LOOP_START
+      this.sprite.currentFrame = 0;
+      this.sprite.play();
+    } else if (next === "idle-front") {
+      this.sprite.position.set(0, IDLE_FRONT_Y_OFFSET);
+      this.sprite.animationSpeed = IDLE_ANIM_SPEED;
       this.sprite.loop = true;
       this.sprite.currentFrame = 0;
       this.sprite.play();
@@ -539,6 +583,7 @@ export class Player {
       next === "shoot-lower-left" ||
       next === "shoot-lower-right"
     ) {
+      this.sprite.position.set(0, SHOOT_Y_OFFSET);
       this.sprite.animationSpeed = SHOOT_ANIM_SPEED;
       this.sprite.loop = false;
       this.sprite.currentFrame = 0;
@@ -622,8 +667,11 @@ export class Player {
       this.sprite.loop = false;
       this.sprite.currentFrame = 0;
       this.sprite.play(); // plays frames 0-3, stopped in onFrameChange at LADDER_ENTRY_END
+    } else if (next === "idle-right" || next === "idle-left") {
+      this.sprite.position.set(0, STAND_Y_OFFSET);
+    } else if (next === "shoot-ready-left" || next === "shoot-ready-right") {
+      this.sprite.position.set(0, SHOOT_Y_OFFSET);
     }
-    // idle, shoot-ready: stopped at frame 0
   }
 
   hit() {
@@ -640,7 +688,9 @@ export class Player {
     this.sprite.play();
   }
 
-  get grounded(): boolean { return this.isGrounded; }
+  get grounded(): boolean {
+    return this.isGrounded;
+  }
 
   hurtbox(): Rect {
     const cx = this.container.x;
@@ -709,8 +759,8 @@ export class Player {
   private spawnPellets() {
     const left = this.facingLeft();
     const base = left ? Math.PI : 0;
-    const barrelX = this.container.x + (left ? -18 : 15);
-    const barrelY = this.container.y - 49;
+    const barrelX = this.container.x + (left ? -55 : 55);
+    const barrelY = this.container.y - 94;
     this.pendingBullets.push({ x: barrelX, y: barrelY, angle: base });
   }
 
@@ -971,8 +1021,10 @@ export class Player {
       const isLeft = this.state === "shoot-ready-left";
 
       if (shootJust) {
-        // Replay the cycle from the top
+        // Re-fire: spawn bullet immediately, jump to fire frame, play reload
+        this.spawnPellets();
         this.setState(isLeft ? "shoot-cycle-left" : "shoot-cycle-right");
+        this.sprite.currentFrame = SHOOT_FIRE_FRAME;
         return;
       }
 

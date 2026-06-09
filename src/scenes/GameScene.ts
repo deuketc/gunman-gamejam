@@ -46,11 +46,11 @@ export class GameScene {
   constructor(app: Application) {
     this.screenW = app.screen.width;
     this.screenH = app.screen.height;
-    this.groundY = this.screenH - 42;
+    this.groundY = this.screenH - 63;
     const groundY = this.groundY;
     this.container = new Container();
 
-    const bg = Sprite.from("/assets/background_01.png");
+    const bg = Sprite.from("/assets/background_01_720.png");
     bg.width = this.screenW;
     bg.height = this.screenH;
     this.container.addChild(bg);
@@ -59,37 +59,37 @@ export class GameScene {
     ground.moveTo(0, groundY).lineTo(this.screenW, groundY);
     this.container.addChild(ground);
 
-    const enemy1 = new EnemyStatic(this.screenW - 50, groundY, ENEMY_V1);
+    const enemy1 = new EnemyStatic(this.screenW - 76, groundY, ENEMY_V1);
     this.enemies.push(enemy1);
     this.container.addChild(enemy1.container);
 
-    const enemy2 = new EnemyStatic(207 + 180, groundY - 109, ENEMY_V2);
+    const enemy2 = new EnemyStatic(798, groundY - 218, ENEMY_V2);
     this.enemies.push(enemy2);
     this.container.addChild(enemy2.container);
 
-    const drone = new EnemyDrone(this.screenW / 2 + 110, 42);
+    const drone = new EnemyDrone(this.screenW / 2 + 244, 105);
     this.enemies.push(drone);
     this.container.addChild(drone.container);
 
     this.platforms = [
-      { x: 0, y: groundY - 230, w: 228 },
-      { x: 175, y: groundY - 110, w: 281 },
-      { x: 316, y: groundY - 215, w: 134 },
-      { x: 538, y: groundY - 230, w: 102 },
+      { x: 24,   y: groundY - 460, w: 456 },
+      { x: 374,  y: groundY - 220, w: 562 },
+      { x: 656,  y: groundY - 430, w: 268 },
+      { x: 1100, y: groundY - 460, w: 204 },
     ];
 
     // Ladder connecting platform #1 (top-left) to platform #2 (middle)
-    this.ladders = [{ x: 181, y: groundY - 230, w: 20, h: 120 }];
+    this.ladders = [{ x: 386, y: groundY - 460, w: 40, h: 240 }];
 
-    const door = new Door(15, 214);
+    const door = new Door(54, 449);
     door.onOpen = () => this.inventory.addGrenade();
     this.doors.push(door);
     this.container.addChild(door.container);
 
-    this.player = new Player(100, groundY, this.screenW, groundY);
+    this.player = new Player(224, groundY, this.screenW, groundY);
     this.player.setPlatforms(this.platforms);
     this.player.setLadders(this.ladders);
-    this.lastPlayerX = 50;
+    this.lastPlayerX = 124;
     this.container.addChild(this.player.container);
 
     // Debug overlay always on top
