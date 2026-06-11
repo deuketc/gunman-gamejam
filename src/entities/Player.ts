@@ -73,7 +73,10 @@ const IDLE_FRONT_PATH = "/assets/player-ani-idle-right.png";
 const IDLE_FRONT_FRAME_W = 128;
 const IDLE_FRONT_FRAME_H = 128;
 const IDLE_FRONT_Y_OFFSET = 7;
-const TURN_R_PATH = "/assets/gunman-ani-stand-shutgun-turn-around-right.png";
+const TURN_R_PATH = "/assets/player-ani-turn-around.png";
+const TURN_FRAME_W = 128;
+const TURN_FRAME_H = 128;
+const TURN_Y_OFFSET = 7;
 const TURN_FRAME_COUNT = 3;
 const TURN_ANIM_SPEED = 0.2;
 const PLATFORM_JUMP_PATH =
@@ -317,10 +320,10 @@ export class Player {
         SHOOT_FRAME_W,
         SHOOT_FRAME_H,
       ),
-      "turn-right": cropFrames(turnR, 0, TURN_FRAME_COUNT),
-      "turn-right-back": [...cropFrames(turnR, 0, TURN_FRAME_COUNT)].reverse(),
-      "turn-left": cropFrames(turnR, 0, TURN_FRAME_COUNT),
-      "turn-left-back": [...cropFrames(turnR, 0, TURN_FRAME_COUNT)].reverse(),
+      "turn-right": cropFrames(turnR, 0, TURN_FRAME_COUNT, TURN_FRAME_W, TURN_FRAME_H),
+      "turn-right-back": [...cropFrames(turnR, 0, TURN_FRAME_COUNT, TURN_FRAME_W, TURN_FRAME_H)].reverse(),
+      "turn-left": cropFrames(turnR, 0, TURN_FRAME_COUNT, TURN_FRAME_W, TURN_FRAME_H),
+      "turn-left-back": [...cropFrames(turnR, 0, TURN_FRAME_COUNT, TURN_FRAME_W, TURN_FRAME_H)].reverse(),
       "platform-jump-right": cropFrames(
         pjR,
         0,
@@ -594,6 +597,7 @@ export class Player {
       next === "turn-left" ||
       next === "turn-left-back"
     ) {
+      this.sprite.position.set(0, TURN_Y_OFFSET);
       this.sprite.animationSpeed = TURN_ANIM_SPEED;
       this.sprite.loop = false;
       this.sprite.currentFrame = 0;
@@ -790,6 +794,7 @@ export class Player {
     this.sprite.stop();
     this.sprite.textures = this.textures[backState];
     this.sprite.scale.x = backState.includes("-left") ? -1 : 1;
+    this.sprite.position.set(0, TURN_Y_OFFSET);
     this.sprite.animationSpeed = TURN_ANIM_SPEED;
     this.sprite.loop = false;
     this.sprite.currentFrame = backStart;

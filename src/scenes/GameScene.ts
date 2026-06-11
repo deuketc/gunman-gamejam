@@ -46,7 +46,7 @@ export class GameScene {
   constructor(app: Application) {
     this.screenW = app.screen.width;
     this.screenH = app.screen.height;
-    this.groundY = this.screenH - 63;
+    this.groundY = this.screenH - 58;
     const groundY = this.groundY;
     this.container = new Container();
 

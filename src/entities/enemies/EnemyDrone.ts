@@ -3,12 +3,12 @@ import type { EnemyBase, PendingShot, Rect } from "./EnemyBase";
 
 type DroneState = "fly-left" | "fly-right" | "dying";
 
-const FLY_PATH   = "/assets/drone-ani-flying-left.png";
+const FLY_PATH   = "/assets/drone-ani-flying.png";
 const DEATH_PATH = "/assets/drone-ani-explodes-left.png";
 
 const FRAME_W        = 64;
 const FRAME_H        = 64;
-const FLY_FRAMES     = 12;
+const FLY_FRAMES     = 17;
 const DEATH_FRAMES   = 9;
 const FLY_SPEED      = 0.5;     // px per frame
 const PATROL_DIST    = 200;     // px each side from origin
@@ -78,7 +78,7 @@ export class EnemyDrone implements EnemyBase {
   // ─── Private helpers ──────────────────────────────────────────────────────
 
   private applyFacing() {
-    this.sprite.scale.x = this.facingLeft ? 1 : -1;
+    this.sprite.scale.x = this.facingLeft ? -1 : 1;
   }
 
   private setState(next: DroneState) {
