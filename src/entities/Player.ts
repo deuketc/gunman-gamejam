@@ -137,8 +137,8 @@ const LONG_JUMP_PULL_UP_Y_OFFSET = 28; // sprite offset for pull-up animation fr
 const LONG_JUMP_SPEED_X = 6; // more horizontal range than old jump (was 2)
 
 const IDLE_FRONT_FRAMES = 21;
-const IDLE_TRIGGER_FRAMES = 240; // 4 seconds at 60 fps
 const IDLE_ANIM_SPEED = 0.1; // relaxed pace
+const IDLE_TRIGGER_FRAMES = 60; // 1 second at 60 fps
 const FRAME_W = 64;
 const FRAME_H = 64;
 const WALK_FRAMES = 17;
@@ -320,10 +320,26 @@ export class Player {
         SHOOT_FRAME_W,
         SHOOT_FRAME_H,
       ),
-      "turn-right": cropFrames(turnR, 0, TURN_FRAME_COUNT, TURN_FRAME_W, TURN_FRAME_H),
-      "turn-right-back": [...cropFrames(turnR, 0, TURN_FRAME_COUNT, TURN_FRAME_W, TURN_FRAME_H)].reverse(),
-      "turn-left": cropFrames(turnR, 0, TURN_FRAME_COUNT, TURN_FRAME_W, TURN_FRAME_H),
-      "turn-left-back": [...cropFrames(turnR, 0, TURN_FRAME_COUNT, TURN_FRAME_W, TURN_FRAME_H)].reverse(),
+      "turn-right": cropFrames(
+        turnR,
+        0,
+        TURN_FRAME_COUNT,
+        TURN_FRAME_W,
+        TURN_FRAME_H,
+      ),
+      "turn-right-back": [
+        ...cropFrames(turnR, 0, TURN_FRAME_COUNT, TURN_FRAME_W, TURN_FRAME_H),
+      ].reverse(),
+      "turn-left": cropFrames(
+        turnR,
+        0,
+        TURN_FRAME_COUNT,
+        TURN_FRAME_W,
+        TURN_FRAME_H,
+      ),
+      "turn-left-back": [
+        ...cropFrames(turnR, 0, TURN_FRAME_COUNT, TURN_FRAME_W, TURN_FRAME_H),
+      ].reverse(),
       "platform-jump-right": cropFrames(
         pjR,
         0,

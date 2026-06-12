@@ -291,11 +291,12 @@ export class GameScene {
           .rect(dz.x, dz.y, dz.w, dz.h)
           .fill({ color: 0xffff00, alpha: 0.1 })
           .stroke({ color: 0xffff00, width: 1 });
-        // Hitbox — red
+        // Hitbox — colour reflects enemy state
+        const hbColor = e.hitboxColor ? e.hitboxColor() : 0xff0000;
         this.debugGfx
           .rect(hb.x, hb.y, hb.w, hb.h)
-          .fill({ color: 0xff0000, alpha: 0.15 })
-          .stroke({ color: 0xff0000, width: 1 });
+          .fill({ color: hbColor, alpha: 0.15 })
+          .stroke({ color: hbColor, width: 1 });
       }
       // Player hurtbox — red
       if (!this.player.dead) {
