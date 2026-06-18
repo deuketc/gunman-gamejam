@@ -77,6 +77,9 @@ export interface EnemyStaticConfig {
   stumbleSuperFrameH?: number;
   stumbleSuperFacingRight?: boolean;
 
+  // Death sprite Y offset — optional, defaults to 32
+  deathYOffset?: number;
+
   // Grenade death — optional, falls back to regular death if omitted
   grenadePath?: string;
   grenadeFrameW?: number;
@@ -88,6 +91,7 @@ export interface EnemyStaticConfig {
   laserCoreColor?: number;
 
   // Behaviour — all optional, fall back to defaults below
+  stationary?: boolean; // never walks — stays idle until player detected
   startWalkRight?: boolean; // start walking right instead of left (default false)
   shootFireFrame?: number; // which frame of the shoot loop spawns the laser (default 1)
   shootDelay?: number; // extra ticks to pause between shoot loops (default 0 = continuous)
@@ -105,9 +109,9 @@ export interface EnemyStaticConfig {
 // ─── Preset configs ───────────────────────────────────────────────────────────
 
 export const ENEMY_V1: EnemyStaticConfig = {
-  idlePath: "/assets/soldier-ani-idle.png",
-  walkPath: "/assets/soldier-ani-walk.png",
-  raisePath: "/assets/soldier-ani-shoot.png",
+  idlePath: "/assets/tvman-ani-idle.png",
+  walkPath: "/assets/tvman-ani-walk.png",
+  raisePath: "/assets/tvman-ani-shoot.png",
   deathPath: "/assets/enemy-ani-stand-facing-idle-death-from-bullet.png",
   frameW: 128,
   frameH: 128,
@@ -124,13 +128,15 @@ export const ENEMY_V1: EnemyStaticConfig = {
   raiseFrameW: 128,
   raiseFrameH: 128,
   raiseFacingRight: true,
-  alertFrameCount: 9, // frames 0–8: raise gun
-  shootFrameStart: 9, // frame 9: first shoot frame
-  shootFrameCount: 3, // frames 9–11
+  alertFrameCount: 10, // frames 0–9: raise gun
+  shootFrameStart: 10, // frame 10: first shoot frame
+  shootFrameCount: 6, // frames 10–15
   deathFrameCount: 11,
-  barrelOffsetY: -95,
+  barrelOffsetY: -100,
   shootDelay: 60,
   hitPoints: 3,
+  laserColor: 0xcc0000,
+  laserCoreColor: 0xff8888,
   stumblePath: "/assets/soldier-ani-shot-stumble.png",
   stumbleFrameCount: 11,
   stumbleFrameW: 128,
@@ -153,31 +159,79 @@ export const ENEMY_V1: EnemyStaticConfig = {
 };
 
 export const ENEMY_V2: EnemyStaticConfig = {
-  idlePath: "/assets/enemy-ani-ver2-idle.png",
-  walkPath: "/assets/enemy-ani-ver2-walk.png",
-  raisePath: "/assets/enemy-ani-ver2-shoot.png",
-  deathPath: "/assets/enemy-ani-ver2-death.png",
-  frameW: 64,
-  frameH: 64,
+  idlePath: "/assets/hood-ani-idle.png",
+  walkPath: "/assets/hood-ani-walk.png",
+  raisePath: "/assets/hood-ani-shoot.png",
+  deathPath: "/assets/hood-ani-death.png",
+  frameW: 128,
+  frameH: 128,
   deathFrameW: 128,
   deathFrameH: 128,
-  idleFrameCount: 12,
-  walkFrameCount: 10,
-  alertFrameCount: 7, // frames 0–6 (1-indexed: 1–7)
-  shootFrameStart: 7, // frame 7  (1-indexed: 8)
-  shootFrameCount: 4, // frames 7–10 (1-indexed: 8–11)
-  deathFrameCount: 13,
-  barrelOffsetY: -50, // 8 px higher than default (-42)
-  shootFireFrame: 0, // fire 1 frame earlier than default (1)
+  idleFrameW: 128,
+  idleFrameH: 128,
+  idleFacingRight: true,
+  walkFrameW: 128,
+  walkFrameH: 128,
+  walkFacingRight: true,
+  raiseFrameW: 128,
+  raiseFrameH: 128,
+  raiseFacingRight: true,
+  idleFrameCount: 17,
+  walkFrameCount: 13,
+  alertFrameCount: 5, // frames 0–4: raise gun
+  shootFrameStart: 5, // frame 5: first shoot frame
+  shootFrameCount: 5, // frames 5–9
+  deathFrameCount: 17,
+  barrelOffsetY: -95,
+  shootFireFrame: 0, // fire on first frame of shoot loop
   startWalkRight: true,
   patrolDistance: 100, // shorter than default (200) to stay on platform
   idleTicks: 600, // 10 s (default 5 s + 5 s extra)
   shootDelay: 90,
-  hitPoints: 3,
-  stumblePath: "/assets/enemy-ani-stand-shot-stumble-left.png",
-  stumbleFrameCount: 4,
+  hitPoints: 2,
+  deathYOffset: 0,
+  stumblePath: "/assets/hood-ani-stumble.png",
+  stumbleFrameCount: 9,
+  stumbleFrameW: 128,
+  stumbleFrameH: 128,
+  stumbleFacingRight: true,
   laserColor: 0xcc0000,
   laserCoreColor: 0xff8888,
+};
+
+export const ENEMY_V3: EnemyStaticConfig = {
+  idlePath: "/assets/ninja-ani-idle-long.png",
+  walkPath: "/assets/ninja-ani-walk.png",
+  raisePath: "/assets/ninja-ani-attack.png",
+  deathPath: "/assets/ninja-ani-death.png",
+  frameW: 128,
+  frameH: 128,
+  deathFrameW: 128,
+  deathFrameH: 128,
+  idleFrameW: 128,
+  idleFrameH: 128,
+  idleFacingRight: true,
+  walkFrameW: 128,
+  walkFrameH: 128,
+  walkFacingRight: true,
+  raiseFrameW: 128,
+  raiseFrameH: 256,
+  raiseFacingRight: true,
+  idleFrameCount: 70,
+  walkFrameCount: 14,
+  alertFrameCount: 5, // frames 0–4: wind-up
+  shootFrameStart: 5, // frame 5: attack
+  shootFrameCount: 7, // frames 5–11
+  shootFireFrame: 0,
+  deathFrameCount: 17,
+  deathYOffset: 0,
+  barrelOffsetY: -80,
+  stationary: true,
+  walkAnimSpeed: 0,
+  patrolDistance: 100,
+  idleTicks: 420,
+  hitPoints: 2,
+  alertDistance: 400,
 };
 
 // ─── Behaviour defaults ───────────────────────────────────────────────────────
@@ -255,10 +309,13 @@ export class EnemyStatic implements EnemyBase {
   private frameH: number;
   private laserColor: number | undefined;
   private laserCoreColor: number | undefined;
+  private deathYOffset: number;
+  private stationary: boolean;
   private shootFireFrame: number;
   private shootDelay: number;
   private shootDelayTimer = 0;
   private stumbleCooldown = 0; // prevents same-shot pellets from chaining the combo
+  private lastSeenPlayerX = 0;
   private idleFacingRight: boolean;
   private walkFacingRight: boolean;
   private raiseFacingRight: boolean;
@@ -278,6 +335,8 @@ export class EnemyStatic implements EnemyBase {
     this.laserSpeed = config.laserSpeed ?? DEFAULT_LASER_SPEED;
     this.barrelOffsetX = config.barrelOffsetX ?? DEFAULT_BARREL_OFFSET_X;
     this.barrelOffsetY = config.barrelOffsetY ?? DEFAULT_BARREL_OFFSET_Y;
+    this.deathYOffset = config.deathYOffset ?? 32;
+    this.stationary = config.stationary ?? false;
     this.animSpeed = config.animSpeed ?? DEFAULT_ANIM_SPEED;
     this.walkAnimSpeed = config.walkAnimSpeed ?? DEFAULT_WALK_ANIM_SPEED;
     this.frameW = config.frameW;
@@ -386,20 +445,31 @@ export class EnemyStatic implements EnemyBase {
 
     this.health = config.hitPoints ?? 1;
 
-    this.state = config.startWalkRight ? "walk-right" : "walk-left";
+    this.state = this.stationary
+      ? "idle"
+      : config.startWalkRight
+        ? "walk-right"
+        : "walk-left";
     this.facingLeft = !config.startWalkRight;
     this.patrolGoingLeft = !config.startWalkRight;
 
-    this.sprite = new AnimatedSprite(this.textures.walk);
+    const initTextures = this.stationary
+      ? this.textures.idle
+      : this.textures.walk;
+    const initFacingRight = this.stationary
+      ? this.idleFacingRight
+      : this.walkFacingRight;
+    const initAnimSpeed = this.stationary ? this.animSpeed : this.walkAnimSpeed;
+    this.sprite = new AnimatedSprite(initTextures);
     this.sprite.anchor.set(0.5, 1);
-    this.sprite.scale.x = this.walkFacingRight
+    this.sprite.scale.x = initFacingRight
       ? this.facingLeft
         ? -1
         : 1
       : this.facingLeft
         ? 1
         : -1;
-    this.sprite.animationSpeed = this.walkAnimSpeed;
+    this.sprite.animationSpeed = initAnimSpeed;
     this.sprite.loop = true;
     this.sprite.play();
 
@@ -533,7 +603,9 @@ export class EnemyStatic implements EnemyBase {
         this.sprite.loop = false;
         this.sprite.currentFrame = 0;
         this.sprite.play();
-        this.stumbleExitTime = Date.now() + (this.textures.stumble!.length / this.animSpeed / 60) * 1000;
+        this.stumbleExitTime =
+          Date.now() +
+          (this.textures.stumble!.length / this.animSpeed / 60) * 1000;
         break;
 
       case "stumble-2":
@@ -549,7 +621,9 @@ export class EnemyStatic implements EnemyBase {
         this.sprite.loop = false;
         this.sprite.currentFrame = 0;
         this.sprite.play();
-        this.stumbleExitTime = Date.now() + (this.textures.stumble2!.length / this.animSpeed / 60) * 1000;
+        this.stumbleExitTime =
+          Date.now() +
+          (this.textures.stumble2!.length / this.animSpeed / 60) * 1000;
         break;
 
       case "stumble-super":
@@ -569,7 +643,7 @@ export class EnemyStatic implements EnemyBase {
 
       case "dying":
         this.sprite.scale.x = 1;
-        this.sprite.position.set(0, 32);
+        this.sprite.position.set(0, this.deathYOffset);
         this.sprite.textures = this.textures.dying;
         this.sprite.animationSpeed = this.animSpeed;
         this.sprite.loop = false;
@@ -594,6 +668,10 @@ export class EnemyStatic implements EnemyBase {
       this.setState("alert");
       return;
     }
+    if (this.stationary) {
+      this.setState("idle");
+      return;
+    }
     if (this.container.x <= this.originX - this.patrolDistance) {
       this.setState("walk-right");
     } else if (this.container.x >= this.originX) {
@@ -606,10 +684,35 @@ export class EnemyStatic implements EnemyBase {
   // ─── EnemyBase interface ──────────────────────────────────────────────────
 
   hit() {
-    console.log(`hit() state=${this.state} cooldown=${this.stumbleCooldown} hp=${this.health}`);
+    console.log(
+      `hit() state=${this.state} cooldown=${this.stumbleCooldown} hp=${this.health}`,
+    );
     if (this.state === "dying" || this.state === "grenade-dying") return;
     if (this.state === "stumble-super") return;
     if (this.stumbleCooldown > 0) return;
+
+    // Shot in the back while patrolling/idle — spin around and go berserk
+    const isPassive =
+      this.state === "walk-left" ||
+      this.state === "walk-right" ||
+      this.state === "idle";
+    const backTurned =
+      (this.facingLeft && this.lastSeenPlayerX > this.container.x) ||
+      (!this.facingLeft && this.lastSeenPlayerX < this.container.x);
+    if (isPassive && !this.enraged && backTurned) {
+      this.facingLeft = !this.facingLeft;
+      this.health--;
+      this.enraged = true;
+      if (this.health <= 0) {
+        this.setState("dying");
+      } else if (this.textures.stumble) {
+        this.stumbleCooldown = STUMBLE_HIT_COOLDOWN;
+        this.setState("stumble");
+      } else {
+        this.setState("alert");
+      }
+      return;
+    }
     // Combo chain — each escalation costs HP
     if (this.state === "stumble-2") {
       this.health--;
@@ -711,6 +814,7 @@ export class EnemyStatic implements EnemyBase {
   }
 
   update(playerX: number, playerY: number, _playerMoving: boolean) {
+    this.lastSeenPlayerX = playerX;
     if (this.stumbleCooldown > 0) this.stumbleCooldown--;
     if (this.stumbleExitTime > 0 && Date.now() >= this.stumbleExitTime) {
       this.stumbleExitTime = 0;
@@ -770,9 +874,11 @@ export class EnemyStatic implements EnemyBase {
         break;
 
       case "idle":
-        this.idleTimer--;
-        if (this.idleTimer <= 0) {
-          this.setState(this.facingLeft ? "walk-right" : "walk-left");
+        if (!this.stationary) {
+          this.idleTimer--;
+          if (this.idleTimer <= 0) {
+            this.setState(this.facingLeft ? "walk-right" : "walk-left");
+          }
         }
         break;
     }

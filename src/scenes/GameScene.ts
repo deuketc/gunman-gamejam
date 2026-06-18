@@ -8,6 +8,7 @@ import {
   EnemyStatic,
   ENEMY_V1,
   ENEMY_V2,
+  ENEMY_V3,
 } from "../entities/enemies/EnemyStatic";
 import { EnemyDrone } from "../entities/enemies/EnemyDrone";
 import { EnemyLaser } from "../entities/projectiles/EnemyLaser";
@@ -21,7 +22,9 @@ function pointInRect(px: number, py: number, r: Rect): boolean {
 }
 
 function rectsOverlap(a: Rect, b: Rect): boolean {
-  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+  return (
+    a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
+  );
 }
 
 export class GameScene {
@@ -67,14 +70,18 @@ export class GameScene {
     this.enemies.push(enemy2);
     this.container.addChild(enemy2.container);
 
+    const enemy3 = new EnemyStatic(260, groundY - 460, ENEMY_V3);
+    this.enemies.push(enemy3);
+    this.container.addChild(enemy3.container);
+
     const drone = new EnemyDrone(this.screenW / 2 + 244, 105);
     this.enemies.push(drone);
     this.container.addChild(drone.container);
 
     this.platforms = [
-      { x: 24,   y: groundY - 460, w: 456 },
-      { x: 374,  y: groundY - 220, w: 562 },
-      { x: 656,  y: groundY - 430, w: 268 },
+      { x: 24, y: groundY - 460, w: 456 },
+      { x: 374, y: groundY - 220, w: 562 },
+      { x: 656, y: groundY - 430, w: 268 },
       { x: 1100, y: groundY - 460, w: 204 },
     ];
 
@@ -108,12 +115,21 @@ export class GameScene {
     this.player.update(dt);
 
     // Door interactions
-    if (!this.player.dead && this.player.grounded && Input.isAnyJustPressed("ArrowUp", "KeyW")) {
+    if (
+      !this.player.dead &&
+      this.player.grounded &&
+      Input.isAnyJustPressed("ArrowUp", "KeyW")
+    ) {
       const px = this.player.container.x;
       const py = this.player.container.y;
       for (const d of this.doors) {
         const iz = d.interactionZone();
-        if (px >= iz.x && px <= iz.x + iz.w && py >= iz.y && py <= iz.y + iz.h) {
+        if (
+          px >= iz.x &&
+          px <= iz.x + iz.w &&
+          py >= iz.y &&
+          py <= iz.y + iz.h
+        ) {
           d.interact();
         }
       }

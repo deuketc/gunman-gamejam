@@ -1,6 +1,6 @@
 import { Container, Graphics } from 'pixi.js';
 
-const BULLET_SPEED = 12;
+const BULLET_SPEED = 20;
 
 export class Bullet {
   readonly container: Container;

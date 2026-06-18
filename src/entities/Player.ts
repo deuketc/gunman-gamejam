@@ -56,20 +56,20 @@ const DEATH_PATH = "/assets/gunman-ani-stand-death-right.png";
 const DEATH_FRAME_W = 128;
 const DEATH_FRAME_H = 128;
 const DEATH_FRAME_COUNT = 15;
-const STAND_PATH = "/assets/player-static-right.png";
+const STAND_PATH = "/assets/player-static-south-east.png";
 const STAND_FRAME_W = 128;
 const STAND_FRAME_H = 128;
 const STAND_Y_OFFSET = 7;
-const WALK_R_PATH = "/assets/player-ani-walk-right.png";
+const WALK_R_PATH = "/assets/player-ani-walk.png";
 const WALK_FRAME_W = 128;
 const WALK_FRAME_H = 128;
 const WALK_Y_OFFSET = 7;
 const WALK_LOOP_START = 3; // first frame of the loop portion
-const SHOOT_R_PATH = "/assets/player-ani-shoot-right.png";
+const SHOOT_R_PATH = "/assets/player-ani-shoot.png";
 const SHOOT_FRAME_W = 128;
 const SHOOT_FRAME_H = 128;
 const SHOOT_Y_OFFSET = 7;
-const IDLE_FRONT_PATH = "/assets/player-ani-idle-right.png";
+const IDLE_FRONT_PATH = "/assets/player-ani-idle.png";
 const IDLE_FRONT_FRAME_W = 128;
 const IDLE_FRONT_FRAME_H = 128;
 const IDLE_FRONT_Y_OFFSET = 7;
@@ -79,16 +79,15 @@ const TURN_FRAME_H = 128;
 const TURN_Y_OFFSET = 7;
 const TURN_FRAME_COUNT = 3;
 const TURN_ANIM_SPEED = 0.2;
-const PLATFORM_JUMP_PATH =
-  "/assets/gunman-ani-stand-shutgun-jump-to-platform-right.png";
+const PLATFORM_JUMP_PATH = "/assets/player-ani-jump-to-platform.png";
 const PLATFORM_JUMP_FRAME_W = 128;
-const PLATFORM_JUMP_FRAME_H = 128;
+const PLATFORM_JUMP_FRAME_H = 256;
 const PLATFORM_JUMP_FRAMES = 9;
 const PLATFORM_JUMP_LAUNCH_FRAME = 6; // 0-indexed: physics fire here
 const PLATFORM_JUMP_STARTUP_COUNT = 6; // frames 0-5 play while grounded
 const PLATFORM_JUMP_ANIM_SPEED = 0.2;
-const PLATFORM_JUMP_STRENGTH = 11; // slightly lower than normal jump
-const PLATFORM_JUMP_Y_OFFSET = 32; // shift 128px frame down to align feet with ground
+const PLATFORM_JUMP_STRENGTH = 12; // slightly lower than normal jump
+const PLATFORM_JUMP_Y_OFFSET = 71; // shift 128px frame down to align feet with ground
 const PULL_UP_PATH =
   "/assets/gunman-ani-stand-shutgun-pull-up-to-platform-right.png";
 const PULL_UP_FRAME_W = 128;
@@ -122,31 +121,31 @@ const LADDER_SPEED = 1.5; // px per tick while climbing
 const LADDER_SCRUB = 0.3; // animation frames advanced per tick of movement
 
 // Long jump (left / right jump with run-up animation)
-const LONG_JUMP_PATH = "/assets/gunman-ani-right-jump-long.png";
-const LONG_JUMP_FRAME_W = 128;
+const LONG_JUMP_PATH = "/assets/player-ani-jump-forward.png";
+const LONG_JUMP_FRAME_W = 256;
 const LONG_JUMP_FRAME_H = 128;
 const LONG_JUMP_LAUNCH_FRAME = 2; // frame index when physics fires (after 2 startup frames)
-const LONG_JUMP_AIR_END = 8; // frames 0–7 played during startup + air phase
-const LONG_JUMP_LAND_START = 8; // frames 8–10: cooldown on landing
-const LONG_JUMP_LAND_FRAMES = 3;
+const LONG_JUMP_AIR_END = 3; // frames 0–2 played during startup + air phase
+const LONG_JUMP_LAND_START = 5; // frames 5–6: cooldown on landing
+const LONG_JUMP_LAND_FRAMES = 2;
 const LONG_JUMP_ANIM_SPEED = 0.2;
-const LONG_JUMP_Y_OFFSET = 32; // standard 128px offset
+const LONG_JUMP_Y_OFFSET = 0; // standard 128px offset
 const LONG_JUMP_STRENGTH = 10;
 const LONG_JUMP_HANG_Y_OFFSET = 47; // sprite offset when hanging after a long jump (container.y = p.y + 52)
 const LONG_JUMP_PULL_UP_Y_OFFSET = 28; // sprite offset for pull-up animation from long-jump hang // slightly less height than platform jump
 const LONG_JUMP_SPEED_X = 6; // more horizontal range than old jump (was 2)
 
-const IDLE_FRONT_FRAMES = 21;
+const IDLE_FRONT_FRAMES = 16;
 const IDLE_ANIM_SPEED = 0.1; // relaxed pace
 const IDLE_TRIGGER_FRAMES = 60; // 1 second at 60 fps
 const FRAME_W = 64;
 const FRAME_H = 64;
 const WALK_FRAMES = 17;
-const SHOOT_CYCLE_FRAMES = 19; // frames 0–18 (raise + fire + reload)
-const SHOOT_LOWER_START = 19; // frames 19–23: put-away
-const SHOOT_LOWER_FRAMES = 5;
-const SHOOT_FIRE_FRAME = 5; // 0-indexed: bullet spawns here
-const MOVE_SPEED = 2;
+const SHOOT_CYCLE_FRAMES = 13; // frames 0–12 (raise + fire + reload)
+const SHOOT_LOWER_START = 12; // frames 12–14: put-away
+const SHOOT_LOWER_FRAMES = 3;
+const SHOOT_FIRE_FRAME = 3; // 0-indexed: bullet spawns here
+const MOVE_SPEED = 1.5;
 const GRAVITY = 0.6;
 const WALK_ANIM_SPEED = 0.3;
 const SHOOT_ANIM_SPEED = 0.25;
@@ -229,7 +228,7 @@ export class Player {
     // Ready frame = frame 0 of the shoot sheet (gun fully raised, waiting to fire)
     const readyR = new Texture({
       source: sR.source,
-      frame: new Rectangle(18 * SHOOT_FRAME_W, 0, SHOOT_FRAME_W, SHOOT_FRAME_H),
+      frame: new Rectangle(12 * SHOOT_FRAME_W, 0, SHOOT_FRAME_W, SHOOT_FRAME_H),
     });
 
     // Left states reuse right-facing textures — the sprite is flipped via scale.x = -1
@@ -716,9 +715,9 @@ export class Player {
     const cx = this.container.x;
     const cy = this.container.y;
     if (!this.isGrounded) {
-      return { x: cx - 10, y: cy - 52, w: 20, h: 52 };
+      return { x: cx - 20, y: cy - 104, w: 40, h: 104 };
     }
-    return { x: cx - 12, y: cy - 58, w: 24, h: 58 };
+    return { x: cx - 24, y: cy - 116, w: 48, h: 116 };
   }
 
   detectionZone(): Rect {
@@ -731,12 +730,12 @@ export class Player {
       this.state === "platform-jump-hang-left";
     const yShift = platformJumping ? -15 : 0;
     if (this.state === "ladder") {
-      return { x: cx - 10, y: cy - 72, w: 20, h: 72 };
+      return { x: cx - 20, y: cy - 144, w: 40, h: 144 };
     }
     if (!this.isGrounded) {
-      return { x: cx - 10, y: cy - 52 + yShift, w: 20, h: 52 };
+      return { x: cx - 20, y: cy - 104 + yShift, w: 40, h: 104 };
     }
-    return { x: cx - 12, y: cy - 58 + yShift, w: 24, h: 58 };
+    return { x: cx - 24, y: cy - 116 + yShift, w: 48, h: 116 };
   }
 
   setPlatforms(platforms: Platform[]) {
@@ -780,7 +779,7 @@ export class Player {
     const left = this.facingLeft();
     const base = left ? Math.PI : 0;
     const barrelX = this.container.x + (left ? -55 : 55);
-    const barrelY = this.container.y - 94;
+    const barrelY = this.container.y - 89;
     this.pendingBullets.push({ x: barrelX, y: barrelY, angle: base });
   }
 
@@ -937,15 +936,21 @@ export class Player {
         this.state === "jump-right" ||
         this.state === "jump-left"
       ) {
-        // platform-jump has a +15 raise; long jump uses the plain airborne top (cy - 52)
         const isLongJump =
           this.state === "jump-right" || this.state === "jump-left";
-        const hangOffset = isLongJump ? 52 : 67;
-        const dzTop = this.container.y - hangOffset;
-        const prevDzTop = prevY - hangOffset;
-        const dz = this.detectionZone();
+        // grabOffset matches the detection zone top so the grab fires exactly when
+        // the yellow debug box crosses the platform surface
+        const grabOffset = isLongJump ? 52 : 119;
+        // hangOffset controls where the player snaps to when hanging
+        const hangOffset = isLongJump ? 52 : 115;
+        const dzTop = this.container.y - grabOffset;
+        const prevDzTop = prevY - grabOffset;
+        const cx = this.container.x;
+        // wider x margin for platform-jump so the player doesn't need pixel-perfect positioning
+        const grabMarginX = isLongJump ? 0 : 64;
         for (const p of this.platforms) {
-          const xOverlap = dz.x < p.x + p.w && dz.x + dz.w > p.x;
+          const xOverlap =
+            cx + grabMarginX > p.x && cx - grabMarginX < p.x + p.w;
 
           // Case 1: ascending — dzTop crosses platform surface from below
           const verticalGrab =
@@ -956,8 +961,8 @@ export class Player {
             this.velocityY > 0 && dzTop >= p.y && prevDzTop < p.y;
 
           if (xOverlap && (verticalGrab || descendingGrab)) {
-            this.hangPlatformY = p.y; // remember for pull-up landing
-            this.container.y = p.y + hangOffset; // snap detection zone top to platform surface
+            this.hangPlatformY = p.y;
+            this.container.y = p.y + hangOffset;
             this.velocityX = 0;
             this.velocityY = 0;
             if (this.state === "jump-right") this.setState("jump-hang-right");
