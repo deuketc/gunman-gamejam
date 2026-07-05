@@ -1,10 +1,10 @@
 import { AnimatedSprite, Assets, Container, Rectangle, Texture } from "pixi.js";
 import type { Rect } from "../Platform";
 
-const DOOR_PATH = "/assets/door-ground-ani-open-.png";
-const DOOR_FRAME_W = 64;
-const DOOR_FRAME_H = 128;
-const DOOR_FRAMES = 11;
+const DOOR_PATH = "/assets/door-01-ani-open.png";
+const DOOR_FRAME_W = 81;
+const DOOR_FRAME_H = 125;
+const DOOR_FRAMES = 10;
 const DOOR_ANIM_SPEED = 0.2;
 
 export class Door {
@@ -49,10 +49,10 @@ export class Door {
 
   interactionZone(): Rect {
     return {
-      x: this.container.x + 14,
-      y: this.container.y + 38,
-      w: 35,
-      h: 67,
+      x: this.container.x + 8,
+      y: this.container.y + 0,
+      w: 70,
+      h: 150,
     };
   }
 }

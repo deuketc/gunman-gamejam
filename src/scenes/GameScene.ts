@@ -70,7 +70,7 @@ export class GameScene {
     this.enemies.push(enemy2);
     this.container.addChild(enemy2.container);
 
-    const enemy3 = new EnemyStatic(260, groundY - 460, ENEMY_V3);
+    const enemy3 = new EnemyStatic(350, groundY - 460, ENEMY_V3);
     this.enemies.push(enemy3);
     this.container.addChild(enemy3.container);
 
@@ -86,9 +86,9 @@ export class GameScene {
     ];
 
     // Ladder connecting platform #1 (top-left) to platform #2 (middle)
-    this.ladders = [{ x: 386, y: groundY - 460, w: 40, h: 240 }];
+    this.ladders = [{ x: 381, y: groundY - 460, w: 50, h: 240 }];
 
-    const door = new Door(54, 449);
+    const door = new Door(75, 519);
     door.onOpen = () => this.inventory.addGrenade();
     this.doors.push(door);
     this.container.addChild(door.container);
@@ -112,6 +112,7 @@ export class GameScene {
     // Toggle debug overlay
     if (Input.isJustPressed("Backquote")) this.debugMode = !this.debugMode;
 
+    this.player.setHasGrenade(this.inventory.grenadeCount > 0);
     this.player.update(dt);
 
     // Door interactions
@@ -280,6 +281,10 @@ export class GameScene {
     // Debug overlay
     this.debugGfx.clear();
     if (this.debugMode) {
+      this.debugGfx
+        .moveTo(0, this.groundY)
+        .lineTo(this.screenW, this.groundY)
+        .stroke({ color: 0x00ff44, width: 1 });
       for (const p of this.platforms) {
         this.debugGfx
           .moveTo(p.x, p.y)

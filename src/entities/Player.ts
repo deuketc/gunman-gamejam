@@ -52,73 +52,74 @@ interface PendingGrenade {
   facingLeft: boolean;
 }
 
-const DEATH_PATH = "/assets/gunman-ani-stand-death-right.png";
+const DEATH_PATH = "/assets/player-ani-death.png";
 const DEATH_FRAME_W = 128;
 const DEATH_FRAME_H = 128;
-const DEATH_FRAME_COUNT = 15;
+const DEATH_FRAME_COUNT = 11;
 const STAND_PATH = "/assets/player-static-south-east.png";
 const STAND_FRAME_W = 128;
 const STAND_FRAME_H = 128;
-const STAND_Y_OFFSET = 7;
+const STAND_Y_OFFSET = 0;
 const WALK_R_PATH = "/assets/player-ani-walk.png";
 const WALK_FRAME_W = 128;
 const WALK_FRAME_H = 128;
-const WALK_Y_OFFSET = 7;
+const WALK_Y_OFFSET = 0;
 const WALK_LOOP_START = 3; // first frame of the loop portion
 const SHOOT_R_PATH = "/assets/player-ani-shoot.png";
 const SHOOT_FRAME_W = 128;
 const SHOOT_FRAME_H = 128;
-const SHOOT_Y_OFFSET = 7;
+const SHOOT_Y_OFFSET = 0;
 const IDLE_FRONT_PATH = "/assets/player-ani-idle.png";
 const IDLE_FRONT_FRAME_W = 128;
 const IDLE_FRONT_FRAME_H = 128;
-const IDLE_FRONT_Y_OFFSET = 7;
+const IDLE_FRONT_Y_OFFSET = 0;
 const TURN_R_PATH = "/assets/player-ani-turn-around.png";
 const TURN_FRAME_W = 128;
 const TURN_FRAME_H = 128;
-const TURN_Y_OFFSET = 7;
+const TURN_Y_OFFSET = 0;
 const TURN_FRAME_COUNT = 3;
 const TURN_ANIM_SPEED = 0.2;
 const PLATFORM_JUMP_PATH = "/assets/player-ani-jump-to-platform.png";
 const PLATFORM_JUMP_FRAME_W = 128;
 const PLATFORM_JUMP_FRAME_H = 256;
-const PLATFORM_JUMP_FRAMES = 9;
-const PLATFORM_JUMP_LAUNCH_FRAME = 6; // 0-indexed: physics fire here
-const PLATFORM_JUMP_STARTUP_COUNT = 6; // frames 0-5 play while grounded
+const PLATFORM_JUMP_FRAMES = 7;
+const PLATFORM_JUMP_LAUNCH_FRAME = 5; // 0-indexed: physics fire here
+const PLATFORM_JUMP_STARTUP_COUNT = 5; // frames 0-4 play while grounded
 const PLATFORM_JUMP_ANIM_SPEED = 0.2;
 const PLATFORM_JUMP_STRENGTH = 12; // slightly lower than normal jump
-const PLATFORM_JUMP_Y_OFFSET = 71; // shift 128px frame down to align feet with ground
-const PULL_UP_PATH =
-  "/assets/gunman-ani-stand-shutgun-pull-up-to-platform-right.png";
+const PLATFORM_JUMP_Y_OFFSET = 64; // shift 128px frame down to align feet with ground
+const PULL_UP_PATH = "/assets/player-ani-pull-up-to-platform.png";
 const PULL_UP_FRAME_W = 128;
-const PULL_UP_FRAME_H = 160;
-const PULL_UP_FRAMES = 13;
+const PULL_UP_FRAME_H = 256;
+const PULL_UP_FRAMES = 9;
 const PULL_UP_ANIM_SPEED = 0.2;
-const PULL_UP_Y_OFFSET = 13; // centres 160px frame on platform ledge (80 - hangOffset 67)
-const FALL_PATH = "/assets/gunman-ani-fall-shutgun-right.png";
+const PULL_UP_Y_OFFSET = PLATFORM_JUMP_Y_OFFSET - 54; // matches hang frame offset so the hang->pull-up transition doesn't jump
+const LADDER_PULL_UP_Y_OFFSET = PULL_UP_Y_OFFSET + 50; // ladder-top exit snaps in higher than a platform jump, so pull up sits lower
+const FALL_PATH = "/assets/player-ani-fall-from-platform.png";
 const FALL_FRAME_W = 128;
 const FALL_FRAME_H = 128;
-const FALL_INTRO_FRAMES = 3; // frames 0-2: play then freeze while falling
-const FALL_LAND_FRAMES = 4; // frames 3-6: play on ground contact
+const FALL_INTRO_FRAMES = 2; // frames 0-1: play then freeze while falling
+const FALL_LAND_FRAMES = 3; // frames 1-3: play on ground contact
 const FALL_ANIM_SPEED = 0.25;
-const FALL_Y_OFFSET = 32; // same standard offset as other 128px sprites
+const FALL_Y_OFFSET = 0;
 
-const THROW_PATH = "/assets/gunman-002-ani-right-throw-grenade.png";
-const THROW_FRAMES = 17;
-const THROW_SPAWN_FRAME = 15;
+const THROW_PATH = "/assets/player-ani-throw-grenade.png";
+const THROW_FRAME_W = 128;
+const THROW_FRAME_H = 128;
+const THROW_FRAMES = 9;
+const THROW_SPAWN_FRAME = 6;
 const THROW_ANIM_SPEED = 0.2;
 
-const LADDER_PATH = "/assets/gunman-ani-ladder.png";
+const LADDER_PATH = "/assets/player-ani-ladder-climb.png";
 const LADDER_FRAME_W = 128;
-const LADDER_FRAME_H = 128;
-const LADDER_FRAMES = 19;
+const LADDER_FRAME_H = 256;
+const LADDER_FRAMES = 7;
 const LADDER_Y_OFFSET = 32; // standard 128px frame offset
 const LADDER_ANIM_SPEED = 0.2;
-const LADDER_ENTRY_END = 3; // last frame of grab animation (0-indexed)
-const LADDER_CLIMB_START = 5; // first frame of climb loop
-const LADDER_CLIMB_END = 18; // last frame of climb loop
+const LADDER_CLIMB_START = 0; // first frame of climb loop
+const LADDER_CLIMB_END = 6; // last frame of climb loop
 const LADDER_SPEED = 1.5; // px per tick while climbing
-const LADDER_SCRUB = 0.3; // animation frames advanced per tick of movement
+const LADDER_SCRUB = 0.15; // animation frames advanced per tick of movement
 
 // Long jump (left / right jump with run-up animation)
 const LONG_JUMP_PATH = "/assets/player-ani-jump-forward.png";
@@ -131,8 +132,8 @@ const LONG_JUMP_LAND_FRAMES = 2;
 const LONG_JUMP_ANIM_SPEED = 0.2;
 const LONG_JUMP_Y_OFFSET = 0; // standard 128px offset
 const LONG_JUMP_STRENGTH = 10;
-const LONG_JUMP_HANG_Y_OFFSET = 47; // sprite offset when hanging after a long jump (container.y = p.y + 52)
-const LONG_JUMP_PULL_UP_Y_OFFSET = 28; // sprite offset for pull-up animation from long-jump hang // slightly less height than platform jump
+const LONG_JUMP_HANG_Y_OFFSET = 128; // sprite offset when hanging after a long jump (container.y = p.y + 52)
+const LONG_JUMP_PULL_UP_Y_OFFSET = 72; // sprite offset for pull-up animation from long-jump hang // slightly less height than platform jump
 const LONG_JUMP_SPEED_X = 6; // more horizontal range than old jump (was 2)
 
 const IDLE_FRONT_FRAMES = 16;
@@ -193,7 +194,7 @@ export class Player {
   private ladders: Ladder[] = [];
   private activeLadder: Ladder | null = null;
   private ladderFrameAccum = 0;
-  private ladderEntryDone = false;
+  private hasGrenade = false;
 
   constructor(x: number, y: number, screenW: number, groundY: number) {
     this.screenW = screenW;
@@ -434,8 +435,20 @@ export class Player {
         LADDER_FRAME_W,
         LADDER_FRAME_H,
       ),
-      "throw-right": cropFrames(throwR, 0, THROW_FRAMES),
-      "throw-left": cropFrames(throwR, 0, THROW_FRAMES),
+      "throw-right": cropFrames(
+        throwR,
+        0,
+        THROW_FRAMES,
+        THROW_FRAME_W,
+        THROW_FRAME_H,
+      ),
+      "throw-left": cropFrames(
+        throwR,
+        0,
+        THROW_FRAMES,
+        THROW_FRAME_W,
+        THROW_FRAME_H,
+      ),
     };
 
     this.sprite = new AnimatedSprite(this.textures["idle-front"]);
@@ -485,20 +498,10 @@ export class Player {
       ) {
         const left = this.state === "throw-left";
         this.pendingGrenades.push({
-          x: this.container.x + (left ? -20 : 20),
-          y: this.container.y - 40,
+          x: this.container.x + (left ? -40 : 40),
+          y: this.container.y - 80,
           facingLeft: left,
         });
-      }
-
-      // Ladder entry: freeze at frame 3 then wait for climb input
-      if (
-        this.state === "ladder" &&
-        !this.ladderEntryDone &&
-        frame === LADDER_ENTRY_END
-      ) {
-        this.sprite.stop();
-        this.ladderEntryDone = true;
       }
     };
 
@@ -632,7 +635,6 @@ export class Player {
       next === "platform-jump-hang-right" ||
       next === "platform-jump-hang-left"
     ) {
-      this.pullUpYOffset = PULL_UP_Y_OFFSET; // standard hang offset
       this.sprite.position.set(0, PLATFORM_JUMP_Y_OFFSET);
       this.sprite.loop = false;
       this.sprite.currentFrame = PLATFORM_JUMP_FRAMES - 1; // frozen at last frame
@@ -680,12 +682,11 @@ export class Player {
       this.sprite.currentFrame = 0;
       this.sprite.play();
     } else if (next === "ladder") {
-      this.ladderEntryDone = false;
       this.sprite.position.set(0, LADDER_Y_OFFSET);
       this.sprite.animationSpeed = LADDER_ANIM_SPEED;
       this.sprite.loop = false;
       this.sprite.currentFrame = 0;
-      this.sprite.play(); // plays frames 0-3, stopped in onFrameChange at LADDER_ENTRY_END
+      this.sprite.stop(); // manual frame stepping drives the climb loop
     } else if (next === "idle-right" || next === "idle-left") {
       this.sprite.position.set(0, STAND_Y_OFFSET);
     } else if (next === "shoot-ready-left" || next === "shoot-ready-right") {
@@ -701,7 +702,7 @@ export class Player {
     this.sprite.scale.x = 1;
     this.sprite.onComplete = undefined;
     this.sprite.textures = this.deathFrames;
-    this.sprite.position.set(0, 32); // shift down so centred frame sits at ground level
+    this.sprite.position.set(0, 0);
     this.sprite.loop = false;
     this.sprite.currentFrame = 0;
     this.sprite.play();
@@ -730,7 +731,7 @@ export class Player {
       this.state === "platform-jump-hang-left";
     const yShift = platformJumping ? -15 : 0;
     if (this.state === "ladder") {
-      return { x: cx - 20, y: cy - 144, w: 40, h: 144 };
+      return { x: cx - 20, y: cy - 164, w: 40, h: 144 };
     }
     if (!this.isGrounded) {
       return { x: cx - 20, y: cy - 104 + yShift, w: 40, h: 104 };
@@ -744,6 +745,10 @@ export class Player {
 
   setLadders(ladders: Ladder[]) {
     this.ladders = ladders;
+  }
+
+  setHasGrenade(has: boolean) {
+    this.hasGrenade = has;
   }
 
   private enterLadder(ladder: Ladder) {
@@ -846,16 +851,8 @@ export class Player {
         const l = this.activeLadder!;
         this.container.x = l.x + l.w / 2; // pin to ladder centre
 
-        if (!this.ladderEntryDone) return; // wait for grab animation to finish
-
         const down = Input.isAnyDown("ArrowDown", "KeyS");
-        const climbRange = LADDER_CLIMB_END - LADDER_CLIMB_START + 1; // 14 frames
-
-        // On first input after entry, jump into the climb frame range
-        if (this.sprite.currentFrame < LADDER_CLIMB_START) {
-          if (!turnKey && !down) return;
-          this.sprite.currentFrame = LADDER_CLIMB_START;
-        }
+        const climbRange = LADDER_CLIMB_END - LADDER_CLIMB_START + 1; // 7 frames
 
         if (turnKey) {
           this.container.y -= LADDER_SPEED;
@@ -869,13 +866,13 @@ export class Player {
           // Exit top — detection zone top meets upper platform
           if (this.detectionZone().y <= l.y) {
             this.hangPlatformY = l.y;
-            this.pullUpYOffset = PULL_UP_Y_OFFSET;
+            this.pullUpYOffset = LADDER_PULL_UP_Y_OFFSET;
             this.container.y = l.y + 67;
             this.activeLadder = null;
             this.setState(
               this.lastFacingLeft
-                ? "platform-jump-hang-left"
-                : "platform-jump-hang-right",
+                ? "platform-pull-up-left"
+                : "platform-pull-up-right",
             );
           }
         } else if (down) {
@@ -968,9 +965,13 @@ export class Player {
             if (this.state === "jump-right") this.setState("jump-hang-right");
             else if (this.state === "jump-left")
               this.setState("jump-hang-left");
-            else if (this.state === "platform-jump-left")
+            else if (this.state === "platform-jump-left") {
+              this.pullUpYOffset = PULL_UP_Y_OFFSET;
               this.setState("platform-jump-hang-left");
-            else this.setState("platform-jump-hang-right");
+            } else {
+              this.pullUpYOffset = PULL_UP_Y_OFFSET;
+              this.setState("platform-jump-hang-right");
+            }
             return;
           }
         }
@@ -1076,6 +1077,12 @@ export class Player {
         );
         return;
       }
+      if (Input.isJustPressed("KeyG") && this.hasGrenade) {
+        this.setState(
+          this.state === "turn-left" ? "throw-left" : "throw-right",
+        );
+        return;
+      }
       // Ladder entry when fully turned (frame 2) and Up/W held
       if (turnKey && this.sprite.currentFrame === TURN_FRAME_COUNT - 1) {
         const dzCx = this.container.x;
@@ -1098,6 +1105,11 @@ export class Player {
 
     // --- TURN BACK: animation drives itself; onComplete → idle ---
     if (this.state === "turn-right-back" || this.state === "turn-left-back") {
+      if (Input.isJustPressed("KeyG") && this.hasGrenade) {
+        this.setState(
+          this.state === "turn-left-back" ? "throw-left" : "throw-right",
+        );
+      }
       return;
     }
 
@@ -1129,7 +1141,7 @@ export class Player {
       return;
     }
 
-    if (Input.isJustPressed("KeyG")) {
+    if (Input.isJustPressed("KeyG") && this.hasGrenade) {
       this.setState(this.facingLeft() ? "throw-left" : "throw-right");
       return;
     }

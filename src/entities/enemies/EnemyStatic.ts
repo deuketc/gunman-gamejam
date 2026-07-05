@@ -9,9 +9,7 @@ type EnemyState =
   | "shoot"
   | "dying"
   | "grenade-dying"
-  | "stumble"
-  | "stumble-2"
-  | "stumble-super";
+  | "stumble";
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -63,22 +61,9 @@ export interface EnemyStaticConfig {
   stumbleFrameH?: number;
   stumbleFacingRight?: boolean;
 
-  // Second stumble (combo hit while stumble-1 is playing) — optional
-  stumble2Path?: string;
-  stumble2FrameCount?: number;
-  stumble2FrameW?: number;
-  stumble2FrameH?: number;
-  stumble2FacingRight?: boolean;
-
-  // Super stumble (combo hit while stumble-2 is playing) — optional
-  stumbleSuperPath?: string;
-  stumbleSuperFrameCount?: number;
-  stumbleSuperFrameW?: number;
-  stumbleSuperFrameH?: number;
-  stumbleSuperFacingRight?: boolean;
-
   // Death sprite Y offset — optional, defaults to 32
   deathYOffset?: number;
+  deathFacingRight?: boolean;
 
   // Grenade death — optional, falls back to regular death if omitted
   grenadePath?: string;
@@ -102,6 +87,7 @@ export interface EnemyStaticConfig {
   laserSpeed?: number;
   barrelOffsetX?: number;
   barrelOffsetY?: number;
+  raiseXOffset?: number;
   animSpeed?: number;
   walkAnimSpeed?: number;
 }
@@ -112,7 +98,7 @@ export const ENEMY_V1: EnemyStaticConfig = {
   idlePath: "/assets/tvman-ani-idle.png",
   walkPath: "/assets/tvman-ani-walk.png",
   raisePath: "/assets/tvman-ani-shoot.png",
-  deathPath: "/assets/enemy-ani-stand-facing-idle-death-from-bullet.png",
+  deathPath: "/assets/tvman-ani-death.png",
   frameW: 128,
   frameH: 128,
   deathFrameW: 128,
@@ -131,27 +117,19 @@ export const ENEMY_V1: EnemyStaticConfig = {
   alertFrameCount: 10, // frames 0–9: raise gun
   shootFrameStart: 10, // frame 10: first shoot frame
   shootFrameCount: 6, // frames 10–15
-  deathFrameCount: 11,
+  deathFrameCount: 7,
+  deathFacingRight: true,
+  deathYOffset: 0,
   barrelOffsetY: -100,
   shootDelay: 60,
   hitPoints: 3,
   laserColor: 0xcc0000,
   laserCoreColor: 0xff8888,
-  stumblePath: "/assets/soldier-ani-shot-stumble.png",
+  stumblePath: "/assets/tvman-ani-stumble02.png",
   stumbleFrameCount: 11,
   stumbleFrameW: 128,
   stumbleFrameH: 128,
   stumbleFacingRight: true,
-  stumble2Path: "/assets/soldier-ani-shot-stumble-02.png",
-  stumble2FrameCount: 11,
-  stumble2FrameW: 128,
-  stumble2FrameH: 128,
-  stumble2FacingRight: true,
-  stumbleSuperPath: "/assets/soldier-ani-shot-stumble-03.png",
-  stumbleSuperFrameCount: 8,
-  stumbleSuperFrameW: 128,
-  stumbleSuperFrameH: 128,
-  stumbleSuperFacingRight: true,
   grenadePath: "/assets/enemy-ani-stand-facing-granade-explotion.png",
   grenadeFrameW: 128,
   grenadeFrameH: 120,
@@ -214,22 +192,28 @@ export const ENEMY_V3: EnemyStaticConfig = {
   walkFrameW: 128,
   walkFrameH: 128,
   walkFacingRight: true,
-  raiseFrameW: 128,
-  raiseFrameH: 256,
+  raiseFrameW: 256,
+  raiseFrameH: 128,
   raiseFacingRight: true,
-  idleFrameCount: 70,
-  walkFrameCount: 14,
+  idleFrameCount: 128,
+  walkFrameCount: 17,
   alertFrameCount: 5, // frames 0–4: wind-up
   shootFrameStart: 5, // frame 5: attack
   shootFrameCount: 7, // frames 5–11
   shootFireFrame: 0,
-  deathFrameCount: 17,
+  deathFrameCount: 9,
+  deathFacingRight: true,
   deathYOffset: 0,
-  barrelOffsetY: -80,
-  stationary: true,
-  walkAnimSpeed: 0,
+  barrelOffsetX: 130,
+  barrelOffsetY: -70,
+  raiseXOffset: 65,
+  stumblePath: "/assets/ninja-ani-stumble.png",
+  stumbleFrameCount: 11,
+  stumbleFrameW: 128,
+  stumbleFrameH: 128,
+  stumbleFacingRight: true,
   patrolDistance: 100,
-  idleTicks: 420,
+  idleTicks: 2200,
   hitPoints: 2,
   alertDistance: 400,
 };
@@ -245,7 +229,6 @@ const DEFAULT_BARREL_OFFSET_X = 24;
 const DEFAULT_BARREL_OFFSET_Y = -42;
 const DEFAULT_ANIM_SPEED = 0.15;
 const DEFAULT_WALK_ANIM_SPEED = 0.2;
-const STUMBLE_HIT_COOLDOWN = 2; // ticks to block same-frame pellets from chaining
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -282,14 +265,10 @@ export class EnemyStatic implements EnemyBase {
     dying: Texture[];
     grenadeDying: Texture[] | null;
     stumble: Texture[] | null;
-    stumble2: Texture[] | null;
-    stumbleSuper: Texture[] | null;
   };
   private health: number;
   private enraged = false;
   private pendingShots: PendingShot[] = [];
-  private stumbleExitTime = 0; // Date.now() timestamp when combo window closes
-
   private originX: number;
   private facingLeft = true;
   private patrolGoingLeft = true;
@@ -314,14 +293,15 @@ export class EnemyStatic implements EnemyBase {
   private shootFireFrame: number;
   private shootDelay: number;
   private shootDelayTimer = 0;
-  private stumbleCooldown = 0; // prevents same-shot pellets from chaining the combo
+  private hitCooldown = 0;
+  private pendingDeath = false;
   private lastSeenPlayerX = 0;
   private idleFacingRight: boolean;
   private walkFacingRight: boolean;
   private raiseFacingRight: boolean;
   private stumbleFacingRight: boolean;
-  private stumble2FacingRight: boolean;
-  private stumbleSuperFacingRight: boolean;
+  private deathFacingRight: boolean;
+  private raiseXOffset: number;
 
   constructor(x: number, y: number, config: EnemyStaticConfig) {
     this.container = new Container();
@@ -349,8 +329,8 @@ export class EnemyStatic implements EnemyBase {
     this.walkFacingRight = config.walkFacingRight ?? false;
     this.raiseFacingRight = config.raiseFacingRight ?? false;
     this.stumbleFacingRight = config.stumbleFacingRight ?? false;
-    this.stumble2FacingRight = config.stumble2FacingRight ?? false;
-    this.stumbleSuperFacingRight = config.stumbleSuperFacingRight ?? false;
+    this.deathFacingRight = config.deathFacingRight ?? false;
+    this.raiseXOffset = config.raiseXOffset ?? 0;
 
     const idleSheet = Assets.get<Texture>(config.idlePath);
     const walkSheet = Assets.get<Texture>(config.walkPath);
@@ -362,13 +342,6 @@ export class EnemyStatic implements EnemyBase {
     const stumbleSheet = config.stumblePath
       ? Assets.get<Texture>(config.stumblePath)
       : null;
-    const stumble2Sheet = config.stumble2Path
-      ? Assets.get<Texture>(config.stumble2Path)
-      : null;
-    const stumbleSuperSheet = config.stumbleSuperPath
-      ? Assets.get<Texture>(config.stumbleSuperPath)
-      : null;
-
     this.textures = {
       idle: cropFrames(
         idleSheet,
@@ -421,24 +394,6 @@ export class EnemyStatic implements EnemyBase {
             config.stumbleFrameCount ?? 4,
             config.stumbleFrameW ?? config.frameW,
             config.stumbleFrameH ?? config.frameH,
-          )
-        : null,
-      stumble2: stumble2Sheet
-        ? cropFrames(
-            stumble2Sheet,
-            0,
-            config.stumble2FrameCount ?? 4,
-            config.stumble2FrameW ?? config.frameW,
-            config.stumble2FrameH ?? config.frameH,
-          )
-        : null,
-      stumbleSuper: stumbleSuperSheet
-        ? cropFrames(
-            stumbleSuperSheet,
-            0,
-            config.stumbleSuperFrameCount ?? 4,
-            config.stumbleSuperFrameW ?? config.frameW,
-            config.stumbleSuperFrameH ?? config.frameH,
           )
         : null,
     };
@@ -505,9 +460,13 @@ export class EnemyStatic implements EnemyBase {
         }
       } else if (this.state === "dying" || this.state === "grenade-dying") {
         this.dead = true;
-      } else if (this.state === "stumble-super") {
-        this.sprite.stop(); // freeze on last frame
-        this.dead = true;
+      } else if (this.state === "stumble") {
+        if (this.pendingDeath) {
+          this.pendingDeath = false;
+          this.setState("dying");
+        } else {
+          this.resumePatrol();
+        }
       }
     };
 
@@ -516,7 +475,6 @@ export class EnemyStatic implements EnemyBase {
   }
 
   private setState(next: EnemyState) {
-    this.stumbleExitTime = 0;
     this.state = next;
     this.sprite.stop();
     this.sprite.position.set(0, 0);
@@ -568,6 +526,10 @@ export class EnemyStatic implements EnemyBase {
           : this.facingLeft
             ? 1
             : -1;
+        this.sprite.position.set(
+          this.facingLeft ? -this.raiseXOffset : this.raiseXOffset,
+          0,
+        );
         this.sprite.textures = this.textures.alert;
         this.sprite.animationSpeed = this.animSpeed;
         this.sprite.loop = false;
@@ -583,6 +545,10 @@ export class EnemyStatic implements EnemyBase {
           : this.facingLeft
             ? 1
             : -1;
+        this.sprite.position.set(
+          this.facingLeft ? -this.raiseXOffset : this.raiseXOffset,
+          0,
+        );
         this.sprite.textures = this.textures.shoot;
         this.sprite.animationSpeed = this.animSpeed;
         this.sprite.loop = this.shootDelay <= 0; // play-once when delay is set
@@ -603,46 +569,16 @@ export class EnemyStatic implements EnemyBase {
         this.sprite.loop = false;
         this.sprite.currentFrame = 0;
         this.sprite.play();
-        this.stumbleExitTime =
-          Date.now() +
-          (this.textures.stumble!.length / this.animSpeed / 60) * 1000;
-        break;
-
-      case "stumble-2":
-        this.sprite.scale.x = this.stumble2FacingRight
-          ? this.facingLeft
-            ? -1
-            : 1
-          : this.facingLeft
-            ? 1
-            : -1;
-        this.sprite.textures = this.textures.stumble2!;
-        this.sprite.animationSpeed = this.animSpeed;
-        this.sprite.loop = false;
-        this.sprite.currentFrame = 0;
-        this.sprite.play();
-        this.stumbleExitTime =
-          Date.now() +
-          (this.textures.stumble2!.length / this.animSpeed / 60) * 1000;
-        break;
-
-      case "stumble-super":
-        this.sprite.scale.x = this.stumbleSuperFacingRight
-          ? this.facingLeft
-            ? -1
-            : 1
-          : this.facingLeft
-            ? 1
-            : -1;
-        this.sprite.textures = this.textures.stumbleSuper!;
-        this.sprite.animationSpeed = this.animSpeed;
-        this.sprite.loop = false;
-        this.sprite.currentFrame = 0;
-        this.sprite.play();
         break;
 
       case "dying":
-        this.sprite.scale.x = 1;
+        this.sprite.scale.x = this.deathFacingRight
+          ? this.facingLeft
+            ? -1
+            : 1
+          : this.facingLeft
+            ? 1
+            : -1;
         this.sprite.position.set(0, this.deathYOffset);
         this.sprite.textures = this.textures.dying;
         this.sprite.animationSpeed = this.animSpeed;
@@ -664,10 +600,6 @@ export class EnemyStatic implements EnemyBase {
   }
 
   private resumePatrol() {
-    if (this.enraged) {
-      this.setState("alert");
-      return;
-    }
     if (this.stationary) {
       this.setState("idle");
       return;
@@ -684,14 +616,11 @@ export class EnemyStatic implements EnemyBase {
   // ─── EnemyBase interface ──────────────────────────────────────────────────
 
   hit() {
-    console.log(
-      `hit() state=${this.state} cooldown=${this.stumbleCooldown} hp=${this.health}`,
-    );
     if (this.state === "dying" || this.state === "grenade-dying") return;
-    if (this.state === "stumble-super") return;
-    if (this.stumbleCooldown > 0) return;
+    if (this.pendingDeath) return;
+    if (this.hitCooldown > 0) return;
 
-    // Shot in the back while patrolling/idle — spin around and go berserk
+    // Shot in the back while patrolling/idle — flip to face player first
     const isPassive =
       this.state === "walk-left" ||
       this.state === "walk-right" ||
@@ -701,51 +630,21 @@ export class EnemyStatic implements EnemyBase {
       (!this.facingLeft && this.lastSeenPlayerX < this.container.x);
     if (isPassive && !this.enraged && backTurned) {
       this.facingLeft = !this.facingLeft;
-      this.health--;
-      this.enraged = true;
-      if (this.health <= 0) {
-        this.setState("dying");
-      } else if (this.textures.stumble) {
-        this.stumbleCooldown = STUMBLE_HIT_COOLDOWN;
-        this.setState("stumble");
-      } else {
-        this.setState("alert");
-      }
-      return;
     }
-    // Combo chain — each escalation costs HP
-    if (this.state === "stumble-2") {
-      this.health--;
-      this.enraged = true;
-      if (this.textures.stumbleSuper) {
-        this.stumbleCooldown = STUMBLE_HIT_COOLDOWN;
-        console.log("3 - super hit");
-        this.setState("stumble-super");
-      } else if (this.health <= 0) {
-        this.setState("dying");
-      }
-      return;
-    }
-    if (this.state === "stumble") {
-      this.health--;
-      this.enraged = true;
-      if (this.health <= 0) {
-        this.setState("dying");
-      } else if (this.textures.stumble2) {
-        this.stumbleCooldown = STUMBLE_HIT_COOLDOWN;
-        console.log("2 - stumble 2");
-        this.setState("stumble-2");
-      }
-      return;
-    }
+
     this.health--;
     this.enraged = true;
-    if (this.health <= 0) {
+    this.hitCooldown = 15;
+
+    if (this.health <= 0 && this.textures.stumble) {
+      this.pendingDeath = true;
+      this.setState("stumble");
+    } else if (this.health <= 0) {
       this.setState("dying");
     } else if (this.textures.stumble) {
-      this.stumbleCooldown = STUMBLE_HIT_COOLDOWN;
-      console.log("1 - stumble");
       this.setState("stumble");
+    } else {
+      this.setState("alert");
     }
   }
 
@@ -779,11 +678,7 @@ export class EnemyStatic implements EnemyBase {
       case "shoot":
         return 0xff0000; // red — firing
       case "stumble":
-        return 0x00aaff; // blue — hit 1
-      case "stumble-2":
-        return 0xaa00ff; // purple — hit 2
-      case "stumble-super":
-        return 0xff00ff; // magenta — super hit
+        return 0x00aaff; // blue — stumble
       case "dying":
       case "grenade-dying":
         return 0x444444; // grey — dead
@@ -815,17 +710,11 @@ export class EnemyStatic implements EnemyBase {
 
   update(playerX: number, playerY: number, _playerMoving: boolean) {
     this.lastSeenPlayerX = playerX;
-    if (this.stumbleCooldown > 0) this.stumbleCooldown--;
-    if (this.stumbleExitTime > 0 && Date.now() >= this.stumbleExitTime) {
-      this.stumbleExitTime = 0;
-      this.resumePatrol();
-    }
+    if (this.hitCooldown > 0) this.hitCooldown--;
     if (
       this.state === "dying" ||
       this.state === "grenade-dying" ||
-      this.state === "stumble" ||
-      this.state === "stumble-2" ||
-      this.state === "stumble-super"
+      this.state === "stumble"
     )
       return;
 

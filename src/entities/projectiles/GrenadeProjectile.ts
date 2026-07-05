@@ -2,8 +2,8 @@ import { Container, Graphics } from "pixi.js";
 import type { Platform, Rect } from "../Platform";
 
 const GRAVITY = 0.3;
-const THROW_VX = 8;
-const THROW_VY = -2;
+const THROW_VX = 10;
+const THROW_VY = -4;
 const BLAST_RADIUS = 60;
 const FUSE_TICKS = 120; // 2 seconds at 60 fps
 
