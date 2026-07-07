@@ -3,9 +3,9 @@ import type { Spritesheet } from "pixi.js";
 import type { Rect } from "./Platform";
 
 const ATLAS_URL        = "https://pixijs.com/assets/spritesheet/mc.json";
-const EXPLOSION_SCALE  = 1.2;
+const EXPLOSION_SCALE  = 2.4;
 const EXPLOSION_SPEED  = 0.6;
-const BLAST_RADIUS     = 60;
+const BLAST_RADIUS     = 120;
 
 export class Explosion {
   readonly container: Container;

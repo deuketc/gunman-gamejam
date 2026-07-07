@@ -130,10 +130,10 @@ export const ENEMY_V1: EnemyStaticConfig = {
   stumbleFrameW: 128,
   stumbleFrameH: 128,
   stumbleFacingRight: true,
-  grenadePath: "/assets/enemy-ani-stand-facing-granade-explotion.png",
+  grenadePath: "/assets/tvman-ani-death-by-grenade.png",
   grenadeFrameW: 128,
-  grenadeFrameH: 120,
-  grenadeFrameCount: 13,
+  grenadeFrameH: 128,
+  grenadeFrameCount: 8,
 };
 
 export const ENEMY_V2: EnemyStaticConfig = {
@@ -175,6 +175,10 @@ export const ENEMY_V2: EnemyStaticConfig = {
   stumbleFacingRight: true,
   laserColor: 0xcc0000,
   laserCoreColor: 0xff8888,
+  grenadePath: "/assets/hood-ani-death-by-grenade.png",
+  grenadeFrameW: 128,
+  grenadeFrameH: 128,
+  grenadeFrameCount: 8,
 };
 
 export const ENEMY_V3: EnemyStaticConfig = {
@@ -216,6 +220,10 @@ export const ENEMY_V3: EnemyStaticConfig = {
   idleTicks: 2200,
   hitPoints: 2,
   alertDistance: 400,
+  grenadePath: "/assets/ninja-ani-death-by-grenade.png",
+  grenadeFrameW: 128,
+  grenadeFrameH: 128,
+  grenadeFrameCount: 8,
 };
 
 // ─── Behaviour defaults ───────────────────────────────────────────────────────
@@ -441,7 +449,7 @@ export class EnemyStatic implements EnemyBase {
           coreColor: this.laserCoreColor,
         });
       }
-      if (this.state === "grenade-dying" && frame === 12) {
+      if (this.state === "grenade-dying" && frame === 7) {
         this.sprite.stop();
         this.dead = true;
       }
@@ -589,7 +597,7 @@ export class EnemyStatic implements EnemyBase {
 
       case "grenade-dying":
         this.sprite.scale.x = 1;
-        this.sprite.position.set(0, 40); // 128x120 frame — slightly more offset
+        this.sprite.position.set(0, 0);
         this.sprite.textures = this.textures.grenadeDying!;
         this.sprite.animationSpeed = this.animSpeed;
         this.sprite.loop = false;

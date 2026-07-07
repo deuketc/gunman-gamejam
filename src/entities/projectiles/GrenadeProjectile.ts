@@ -4,7 +4,7 @@ import type { Platform, Rect } from "../Platform";
 const GRAVITY = 0.3;
 const THROW_VX = 10;
 const THROW_VY = -4;
-const BLAST_RADIUS = 60;
+const BLAST_RADIUS = 120;
 const FUSE_TICKS = 120; // 2 seconds at 60 fps
 
 export class GrenadeProjectile {
@@ -79,12 +79,6 @@ export class GrenadeProjectile {
   hitbox(): Rect | null {
     if (this.landed) return null;
     return { x: this.container.x - 4, y: this.container.y - 4, w: 8, h: 8 };
-  }
-
-  // Immediate detonation — used on direct enemy contact
-  detonateNow() {
-    this.exploded = true;
-    this.dead = true;
   }
 
   blastRadius(): number {

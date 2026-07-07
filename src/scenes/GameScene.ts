@@ -21,12 +21,6 @@ function pointInRect(px: number, py: number, r: Rect): boolean {
   return px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h;
 }
 
-function rectsOverlap(a: Rect, b: Rect): boolean {
-  return (
-    a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
-  );
-}
-
 export class GameScene {
   readonly container: Container;
   private player: Player;
@@ -204,22 +198,6 @@ export class GameScene {
 
     // Update grenades — physics then explosion on impact
     for (const g of this.grenades) g.update(this.groundY, this.platforms);
-
-    // Grenade contact with enemies while in flight
-    for (const g of this.grenades) {
-      if (g.dead) continue;
-      const ghb = g.hitbox();
-      if (!ghb) continue;
-      for (const e of this.enemies) {
-        if (e.dead) continue;
-        if (rectsOverlap(ghb, e.hitbox())) {
-          if (e.hitByExplosion) e.hitByExplosion();
-          else e.hit();
-          g.detonateNow();
-          break;
-        }
-      }
-    }
     this.grenades = this.grenades.filter((g) => {
       if (!g.dead) return true;
       this.container.removeChild(g.container);
