@@ -1,6 +1,7 @@
 import "./style.css";
 import { Application, Assets } from "pixi.js";
 import { Game } from "./Game";
+import { MusicPlayer } from "./audio/MusicPlayer";
 
 async function main() {
   const app = new Application();
@@ -58,6 +59,12 @@ async function main() {
 
   const game = new Game(app);
   game.start();
+
+  // Starts 10s into the file. Actual sound is still gated by the browser's
+  // autoplay policy internally — MusicPlayer resumes itself on the player's
+  // first keypress/click if the browser wouldn't otherwise allow audio yet.
+  const music = new MusicPlayer("/assets/bgm.mid", 0.4, 3);
+  music.start().catch((err) => console.error("Failed to start music:", err));
 }
 
 main();
