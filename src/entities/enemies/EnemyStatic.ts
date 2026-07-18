@@ -1,4 +1,4 @@
-import { AnimatedSprite, Assets, Container, Rectangle, Texture } from "pixi.js";
+import { AnimatedSprite, Assets, Container, Graphics, Rectangle, Texture } from "pixi.js";
 import type { EnemyBase, PendingShot, Rect } from "./EnemyBase";
 
 type EnemyState =
@@ -238,6 +238,10 @@ const DEFAULT_BARREL_OFFSET_Y = -42;
 const DEFAULT_ANIM_SPEED = 0.15;
 const DEFAULT_WALK_ANIM_SPEED = 0.2;
 
+const HEALTH_BAR_WIDTH = 40;
+const HEALTH_BAR_HEIGHT = 5;
+const HEALTH_BAR_GAP = 5; // px above the enemy's head
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function cropFrames(
@@ -275,6 +279,9 @@ export class EnemyStatic implements EnemyBase {
     stumble: Texture[] | null;
   };
   private health: number;
+  private maxHealth: number;
+  private healthBarBg: Graphics;
+  private healthBarFill: Graphics;
   private enraged = false;
   private pendingShots: PendingShot[] = [];
   private originX: number;
@@ -407,6 +414,7 @@ export class EnemyStatic implements EnemyBase {
     };
 
     this.health = config.hitPoints ?? 1;
+    this.maxHealth = this.health;
 
     this.state = this.stationary
       ? "idle"
@@ -479,13 +487,46 @@ export class EnemyStatic implements EnemyBase {
     };
 
     this.container.addChild(this.sprite);
+
+    const barY = -this.frameH - HEALTH_BAR_GAP - HEALTH_BAR_HEIGHT;
+    this.healthBarBg = new Graphics()
+      .rect(-HEALTH_BAR_WIDTH / 2, barY, HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT)
+      .fill(0x220000);
+    this.healthBarFill = new Graphics();
+    this.container.addChild(this.healthBarBg, this.healthBarFill);
+    this.drawHealthBar();
+    this.updateHealthBarVisibility();
+
     this.container.position.set(x, y);
+  }
+
+  private drawHealthBar() {
+    const barY = -this.frameH - HEALTH_BAR_GAP - HEALTH_BAR_HEIGHT;
+    const ratio = Math.max(0, this.health / this.maxHealth);
+    this.healthBarFill.clear();
+    if (ratio <= 0) return;
+    const color = ratio > 0.5 ? 0x00cc44 : ratio > 0.25 ? 0xffaa00 : 0xcc0000;
+    this.healthBarFill
+      .rect(-HEALTH_BAR_WIDTH / 2, barY, HEALTH_BAR_WIDTH * ratio, HEALTH_BAR_HEIGHT)
+      .fill(color);
+  }
+
+  private updateHealthBarVisibility() {
+    const visible =
+      this.state !== "walk-left" &&
+      this.state !== "walk-right" &&
+      this.state !== "idle" &&
+      this.state !== "dying" &&
+      this.state !== "grenade-dying";
+    this.healthBarBg.visible = visible;
+    this.healthBarFill.visible = visible;
   }
 
   private setState(next: EnemyState) {
     this.state = next;
     this.sprite.stop();
     this.sprite.position.set(0, 0);
+    this.updateHealthBarVisibility();
 
     switch (next) {
       case "walk-left":
@@ -643,6 +684,7 @@ export class EnemyStatic implements EnemyBase {
     this.health--;
     this.enraged = true;
     this.hitCooldown = 15;
+    this.drawHealthBar();
 
     if (this.health <= 0 && this.textures.stumble) {
       this.pendingDeath = true;
