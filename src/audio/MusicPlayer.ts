@@ -1,6 +1,7 @@
 import MidiPlayer from "midi-player-js";
 import Soundfont from "soundfont-player";
 import type { Player, PlayingNode } from "soundfont-player";
+import { getAudioContext, unlockAudioContext } from "./audioContext";
 
 // General MIDI program numbers (0-127) mapped to soundfont-player's instrument
 // names (see node_modules/soundfont-player/instruments.json for valid names).
@@ -45,7 +46,6 @@ export class MusicPlayer {
   private path: string;
   private volume: number;
   private startOffsetSeconds: number;
-  private ctx: AudioContext | null = null;
   private player: MidiPlayer.Player | null = null;
   private instrumentsByProgram = new Map<number, Player>();
   private percussion: Player | null = null;
@@ -53,6 +53,7 @@ export class MusicPlayer {
   private activeNotes = new Map<string, PlayingNode>();
   private starting = false;
   private ready = false;
+  private paused = false;
 
   constructor(path: string, volume = 0.4, startOffsetSeconds = 0) {
     this.path = path;
@@ -60,27 +61,12 @@ export class MusicPlayer {
     this.startOffsetSeconds = startOffsetSeconds;
   }
 
-  // Browsers only allow audio to actually produce sound once the page has
-  // seen a user gesture — this fires immediately if that's already true, and
-  // silently resumes as soon as the player's first keypress/click arrives
-  // otherwise, so nothing has to explicitly wait on that gesture to start.
-  private unlockAudio() {
-    const ctx = this.ctx!;
-    if (ctx.state === "running") return;
-    ctx.resume().catch(() => {});
-    const resume = () => {
-      ctx.resume().catch(() => {});
-    };
-    window.addEventListener("pointerdown", resume, { once: true });
-    window.addEventListener("keydown", resume, { once: true });
-  }
-
   async start() {
     if (this.ready || this.starting) return;
     this.starting = true;
 
-    this.ctx = new AudioContext();
-    this.unlockAudio();
+    const ctx = getAudioContext();
+    unlockAudioContext();
     const buffer = await fetch(this.path).then((r) => r.arrayBuffer());
 
     const player = new MidiPlayer.Player((event: MidiPlayer.Event) =>
@@ -101,12 +87,12 @@ export class MusicPlayer {
 
     await Promise.all([
       ...player.instruments.map((program) =>
-        Soundfont.instrument(this.ctx!, GM_INSTRUMENTS[program] ?? "acoustic_grand_piano").then(
+        Soundfont.instrument(ctx, GM_INSTRUMENTS[program] ?? "acoustic_grand_piano").then(
           (instrument) => this.instrumentsByProgram.set(program, instrument),
         ),
       ),
       usesPercussion
-        ? Soundfont.instrument(this.ctx!, "percussion").then((instrument) => {
+        ? Soundfont.instrument(ctx, "percussion").then((instrument) => {
             this.percussion = instrument;
           })
         : Promise.resolve(),
@@ -123,6 +109,24 @@ export class MusicPlayer {
     this.player?.stop();
     this.player = null;
     this.ready = false;
+  }
+
+  pause() {
+    if (!this.player || this.paused) return;
+    this.player.pause();
+    for (const node of this.activeNotes.values()) node.stop();
+    this.activeNotes.clear();
+    this.paused = true;
+  }
+
+  resume() {
+    if (!this.player || !this.paused) return;
+    this.player.play();
+    this.paused = false;
+  }
+
+  get isPaused(): boolean {
+    return this.paused;
   }
 
   private handleEvent(event: MidiPlayer.Event) {

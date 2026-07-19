@@ -1,5 +1,6 @@
 import { AnimatedSprite, Assets, Container, Graphics, Rectangle, Texture } from "pixi.js";
 import type { EnemyBase, PendingShot, Rect } from "./EnemyBase";
+import { Sfx } from "../../audio/Sfx";
 
 type EnemyState =
   | "walk-left"
@@ -75,6 +76,12 @@ export interface EnemyStaticConfig {
   laserColor?: number;
   laserCoreColor?: number;
 
+  // Sfx key to play on fire (see Sfx.load in main.ts) — optional, no sound if omitted
+  laserSound?: string;
+
+  // Sfx key to play on death (see Sfx.load in main.ts) — optional, no sound if omitted
+  deathSound?: string;
+
   // Behaviour — all optional, fall back to defaults below
   stationary?: boolean; // never walks — stays idle until player detected
   startWalkRight?: boolean; // start walking right instead of left (default false)
@@ -125,6 +132,8 @@ export const ENEMY_V1: EnemyStaticConfig = {
   hitPoints: 3,
   laserColor: 0xcc0000,
   laserCoreColor: 0xff8888,
+  laserSound: "laser",
+  deathSound: "death1",
   stumblePath: "/assets/tvman-ani-stumble02.png",
   stumbleFrameCount: 11,
   stumbleFrameW: 128,
@@ -175,6 +184,8 @@ export const ENEMY_V2: EnemyStaticConfig = {
   stumbleFacingRight: true,
   laserColor: 0xcc0000,
   laserCoreColor: 0xff8888,
+  laserSound: "pistol",
+  deathSound: "death2",
   grenadePath: "/assets/hood-ani-death-by-grenade.png",
   grenadeFrameW: 128,
   grenadeFrameH: 128,
@@ -205,6 +216,8 @@ export const ENEMY_V3: EnemyStaticConfig = {
   shootFrameStart: 5, // frame 5: attack
   shootFrameCount: 7, // frames 5–11
   shootFireFrame: 0,
+  laserSound: "slice",
+  deathSound: "death3",
   deathFrameCount: 9,
   deathFacingRight: true,
   deathYOffset: 0,
@@ -295,6 +308,8 @@ export class EnemyStatic implements EnemyBase {
   private idleTicks: number;
   private alertDistance: number;
   private laserSpeed: number;
+  private laserSound: string | undefined;
+  private deathSound: string | undefined;
   private barrelOffsetX: number;
   private barrelOffsetY: number;
   private animSpeed: number;
@@ -328,6 +343,8 @@ export class EnemyStatic implements EnemyBase {
     this.idleTicks = config.idleTicks ?? DEFAULT_IDLE_TICKS;
     this.alertDistance = config.alertDistance ?? DEFAULT_ALERT_DISTANCE;
     this.laserSpeed = config.laserSpeed ?? DEFAULT_LASER_SPEED;
+    this.laserSound = config.laserSound;
+    this.deathSound = config.deathSound;
     this.barrelOffsetX = config.barrelOffsetX ?? DEFAULT_BARREL_OFFSET_X;
     this.barrelOffsetY = config.barrelOffsetY ?? DEFAULT_BARREL_OFFSET_Y;
     this.deathYOffset = config.deathYOffset ?? 32;
@@ -456,6 +473,7 @@ export class EnemyStatic implements EnemyBase {
           color: this.laserColor,
           coreColor: this.laserCoreColor,
         });
+        if (this.laserSound) Sfx.play(this.laserSound);
       }
       if (this.state === "grenade-dying" && frame === 7) {
         this.sprite.stop();
@@ -634,6 +652,7 @@ export class EnemyStatic implements EnemyBase {
         this.sprite.loop = false;
         this.sprite.currentFrame = 0;
         this.sprite.play();
+        if (this.deathSound) Sfx.play(this.deathSound);
         break;
 
       case "grenade-dying":
@@ -644,6 +663,7 @@ export class EnemyStatic implements EnemyBase {
         this.sprite.loop = false;
         this.sprite.currentFrame = 0;
         this.sprite.play();
+        if (this.deathSound) Sfx.play(this.deathSound);
         break;
     }
   }
@@ -685,6 +705,7 @@ export class EnemyStatic implements EnemyBase {
     this.enraged = true;
     this.hitCooldown = 15;
     this.drawHealthBar();
+    Sfx.play("hit1");
 
     if (this.health <= 0 && this.textures.stumble) {
       this.pendingDeath = true;

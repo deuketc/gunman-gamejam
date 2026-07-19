@@ -16,6 +16,9 @@ import { Door } from "../entities/interactables/Door";
 import { Inventory } from "../entities/Inventory";
 import { GrenadeProjectile } from "../entities/projectiles/GrenadeProjectile";
 import { Explosion } from "../entities/Explosion";
+import { Sfx } from "../audio/Sfx";
+import type { MusicPlayer } from "../audio/MusicPlayer";
+import { MusicToggleButton } from "../entities/MusicToggleButton";
 
 function pointInRect(px: number, py: number, r: Rect): boolean {
   return px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h;
@@ -35,12 +38,13 @@ export class GameScene {
   private ladders: Ladder[] = [];
   private doors: Door[] = [];
   private inventory!: Inventory;
+  private musicToggle!: MusicToggleButton;
   private grenades: GrenadeProjectile[] = [];
   private explosions: Explosion[] = [];
   private debugMode = false;
   private debugGfx: Graphics;
 
-  constructor(app: Application) {
+  constructor(app: Application, music: MusicPlayer) {
     this.screenW = app.screen.width;
     this.screenH = app.screen.height;
     this.groundY = this.screenH - 58;
@@ -83,7 +87,10 @@ export class GameScene {
     this.ladders = [{ x: 381, y: groundY - 460, w: 50, h: 240 }];
 
     const door = new Door(75, 519);
-    door.onOpen = () => this.inventory.addGrenade();
+    door.onOpen = () => {
+      this.inventory.addGrenade();
+      Sfx.play("collect");
+    };
     this.doors.push(door);
     this.container.addChild(door.container);
 
@@ -100,6 +107,9 @@ export class GameScene {
     // HUD — inventory sits above everything
     this.inventory = new Inventory(this.screenW, this.screenH);
     this.container.addChild(this.inventory.container);
+
+    this.musicToggle = new MusicToggleButton(this.screenW, music);
+    this.container.addChild(this.musicToggle.container);
   }
 
   update(dt: number) {
@@ -205,6 +215,7 @@ export class GameScene {
         const ex = new Explosion(g.container.x, g.container.y);
         this.explosions.push(ex);
         this.container.addChild(ex.container);
+        Sfx.play("grenade");
         // Blast damage — hit enemies within radius
         const r = g.blastRadius();
         for (const e of this.enemies) {

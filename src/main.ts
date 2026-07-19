@@ -2,6 +2,7 @@ import "./style.css";
 import { Application, Assets } from "pixi.js";
 import { Game } from "./Game";
 import { MusicPlayer } from "./audio/MusicPlayer";
+import { Sfx } from "./audio/Sfx";
 
 async function main() {
   const app = new Application();
@@ -54,17 +55,37 @@ async function main() {
     "/assets/tvman-ani-stumble02.png",
     "/assets/tvman-ani-stumble03.png",
     "/assets/granade_inventory.png",
+    "/assets/music-toggle.png",
     "https://pixijs.com/assets/spritesheet/mc.json",
   ]);
 
-  const game = new Game(app);
-  game.start();
+  await Sfx.load({
+    gunshot: "/assets/sfx/gunshot.wav",
+    grenade: "/assets/sfx/grenade.wav",
+    laser: "/assets/sfx/laser.wav",
+    slice: "/assets/sfx/slice.wav",
+    pistol: "/assets/sfx/pistol.wav",
+    laser2: "/assets/sfx/laser2.wav",
+    explosion1: "/assets/sfx/explosion1.wav",
+    hit1: "/assets/sfx/hit1.wav",
+    collect: "/assets/sfx/collect.wav",
+    landing: "/assets/sfx/landing.wav",
+    death1: "/assets/sfx/death1.wav",
+    death2: "/assets/sfx/death2.wav",
+    death3: "/assets/sfx/death3.wav",
+    jump: "/assets/sfx/jump.wav",
+    opendoor: "/assets/sfx/opendoor.wav",
+    deathplayer: "/assets/sfx/deathplayer.wav",
+  });
 
   // Starts 10s into the file. Actual sound is still gated by the browser's
   // autoplay policy internally — MusicPlayer resumes itself on the player's
   // first keypress/click if the browser wouldn't otherwise allow audio yet.
   const music = new MusicPlayer("/assets/bgm.mid", 0.4, 3);
   music.start().catch((err) => console.error("Failed to start music:", err));
+
+  const game = new Game(app, music);
+  game.start();
 }
 
 main();

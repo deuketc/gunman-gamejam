@@ -1,5 +1,6 @@
 import { AnimatedSprite, Assets, Container, Rectangle, Texture } from "pixi.js";
 import { Input } from "../input/Input";
+import { Sfx } from "../audio/Sfx";
 import type { Platform, Ladder, Rect } from "./Platform";
 
 type PlayerState =
@@ -478,6 +479,7 @@ export class Player {
         this.isGrounded = false;
         this.velocityY = -PLATFORM_JUMP_STRENGTH;
         this.velocityX = 0;
+        Sfx.play("jump");
       }
 
       // Long jump: physics launch at frame 2 (after 2-frame windup on ground)
@@ -489,6 +491,7 @@ export class Player {
         this.isGrounded = false;
         this.velocityY = -LONG_JUMP_STRENGTH;
         this.velocityX = this.pendingJumpVX;
+        Sfx.play("jump");
       }
 
       // Throw: spawn grenade at frame 15
@@ -706,6 +709,7 @@ export class Player {
     this.sprite.loop = false;
     this.sprite.currentFrame = 0;
     this.sprite.play();
+    Sfx.play("deathplayer");
   }
 
   get grounded(): boolean {
@@ -786,6 +790,7 @@ export class Player {
     const barrelX = this.container.x + (left ? -55 : 55);
     const barrelY = this.container.y - 89;
     this.pendingBullets.push({ x: barrelX, y: barrelY, angle: base });
+    Sfx.play("gunshot");
   }
 
   // Starts the pull-up animation from any hang state.
@@ -989,12 +994,16 @@ export class Player {
           this.setState("platform-jump-land-left");
         } else if (this.state === "jump-right") {
           this.setState("jump-land-right");
+          Sfx.play("landing");
         } else if (this.state === "jump-left") {
           this.setState("jump-land-left");
+          Sfx.play("landing");
         } else if (this.state === "fall-right") {
           this.setState("fall-land-right");
+          Sfx.play("landing");
         } else if (this.state === "fall-left") {
           this.setState("fall-land-left");
+          Sfx.play("landing");
         } else {
           this.setState(this.facingLeft() ? "idle-left" : "idle-right");
         }
@@ -1004,7 +1013,8 @@ export class Player {
 
     // --- IDLE FRONT: any input exits back to last facing direction ---
     if (this.state === "idle-front") {
-      if (!left && !right && !jump && !turnKey && !shootJust) return;
+      const throwJust = Input.isJustPressed("KeyG") && this.hasGrenade;
+      if (!left && !right && !jump && !turnKey && !shootJust && !throwJust) return;
       this.idleTimer = 0;
       this.setState(this.lastFacingLeft ? "idle-left" : "idle-right");
       // fall through so the input is handled this frame

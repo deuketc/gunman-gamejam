@@ -1,5 +1,6 @@
 import { AnimatedSprite, Assets, Container, Rectangle, Texture } from "pixi.js";
 import type { EnemyBase, PendingShot, Rect } from "./EnemyBase";
+import { Sfx } from "../../audio/Sfx";
 
 type DroneState = "fly-left" | "fly-right" | "dying";
 
@@ -100,6 +101,7 @@ export class EnemyDrone implements EnemyBase {
       this.sprite.loop = false;
       this.sprite.currentFrame = 0;
       this.sprite.play();
+      Sfx.play("explosion1");
     }
   }
 
@@ -155,6 +157,7 @@ export class EnemyDrone implements EnemyBase {
           color:     0x00cc44,  // green glow
           coreColor: 0x88ffaa,  // light green core
         });
+        Sfx.play("laser2");
       }
     }
 

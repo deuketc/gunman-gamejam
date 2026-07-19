@@ -1,5 +1,6 @@
 import { Application } from 'pixi.js';
 import { GameScene } from './scenes/GameScene';
+import type { MusicPlayer } from './audio/MusicPlayer';
 
 // Gameplay speeds/timers were tuned per-tick against a ~120Hz display, not
 // scaled by elapsed time. Stepping the simulation at a fixed 120Hz here
@@ -14,9 +15,9 @@ export class Game {
   private scene: GameScene;
   private accumulatorMs = 0;
 
-  constructor(app: Application) {
+  constructor(app: Application, music: MusicPlayer) {
     this.app = app;
-    this.scene = new GameScene(app);
+    this.scene = new GameScene(app, music);
   }
 
   start() {

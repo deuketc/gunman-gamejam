@@ -1,5 +1,6 @@
 import { AnimatedSprite, Assets, Container, Rectangle, Texture } from "pixi.js";
 import type { Rect } from "../Platform";
+import { Sfx } from "../../audio/Sfx";
 
 const DOOR_PATH = "/assets/door-01-ani-open.png";
 const DOOR_FRAME_W = 81;
@@ -45,6 +46,7 @@ export class Door {
     if (this.opened || this.sprite.playing) return;
     this.sprite.currentFrame = 0;
     this.sprite.play();
+    Sfx.play("opendoor");
   }
 
   interactionZone(): Rect {
