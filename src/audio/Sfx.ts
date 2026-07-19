@@ -2,7 +2,7 @@ import { getAudioContext } from "./audioContext";
 
 const buffers = new Map<string, AudioBuffer>();
 
-async function load(sounds: Record<string, string>) {
+async function load(sounds: Record<string, string>, onFileLoaded?: () => void) {
   const ctx = getAudioContext();
   await Promise.all(
     Object.entries(sounds).map(async ([name, path]) => {
@@ -11,6 +11,8 @@ async function load(sounds: Record<string, string>) {
         buffers.set(name, await ctx.decodeAudioData(arrayBuffer));
       } catch (err) {
         console.warn(`Sfx: failed to load "${name}" from ${path}`, err);
+      } finally {
+        onFileLoaded?.();
       }
     }),
   );
