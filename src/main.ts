@@ -45,6 +45,8 @@ const TEXTURE_URLS = [
   "/assets/tvman-ani-stumble03.png",
   "/assets/granade_inventory.png",
   "/assets/music-toggle.png",
+  "/assets/player-ani-sprint.png",
+  "/assets/arrow.png",
   "https://pixijs.com/assets/spritesheet/mc.json",
 ];
 
@@ -65,6 +67,7 @@ const SFX_URLS = {
   jump: "/assets/sfx/jump.wav",
   opendoor: "/assets/sfx/opendoor.wav",
   deathplayer: "/assets/sfx/deathplayer.wav",
+  arrow: "/assets/sfx/arrow.wav",
 };
 
 async function main() {

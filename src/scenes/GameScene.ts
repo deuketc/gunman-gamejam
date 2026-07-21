@@ -19,6 +19,7 @@ import { Explosion } from "../entities/Explosion";
 import { Sfx } from "../audio/Sfx";
 import type { MusicPlayer } from "../audio/MusicPlayer";
 import { MusicToggleButton } from "../entities/MusicToggleButton";
+import { IntroSequence } from "../entities/IntroSequence";
 
 function pointInRect(px: number, py: number, r: Rect): boolean {
   return px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h;
@@ -43,6 +44,8 @@ export class GameScene {
   private explosions: Explosion[] = [];
   private debugMode = false;
   private debugGfx: Graphics;
+  private intro: IntroSequence;
+  private introDone = false;
 
   constructor(app: Application, music: MusicPlayer) {
     this.screenW = app.screen.width;
@@ -94,9 +97,10 @@ export class GameScene {
     this.doors.push(door);
     this.container.addChild(door.container);
 
-    this.player = new Player(224, groundY, this.screenW, groundY);
+    this.player = new Player(274, groundY, this.screenW, groundY);
     this.player.setPlatforms(this.platforms);
     this.player.setLadders(this.ladders);
+    this.player.container.visible = false; // revealed once the intro's run-in reaches this spot
     this.lastPlayerX = 124;
     this.container.addChild(this.player.container);
 
@@ -110,39 +114,57 @@ export class GameScene {
 
     this.musicToggle = new MusicToggleButton(this.screenW, music);
     this.container.addChild(this.musicToggle.container);
+
+    // Intro sits above everything — covers the whole scene during the fade
+    this.intro = new IntroSequence(this.screenW, this.screenH, groundY, 274);
+    this.container.addChild(this.intro.container);
   }
 
   update(dt: number) {
+    if (!this.introDone) {
+      this.intro.update(dt);
+      if (this.intro.hasControl) this.player.container.visible = true;
+      if (this.intro.finished) {
+        this.container.removeChild(this.intro.container);
+        this.introDone = true;
+      }
+    }
+
     // Toggle debug overlay
     if (Input.isJustPressed("Backquote")) this.debugMode = !this.debugMode;
 
-    this.player.setHasGrenade(this.inventory.grenadeCount > 0);
-    this.player.update(dt);
+    if (this.intro.hasControl) {
+      this.player.setHasGrenade(this.inventory.grenadeCount > 0);
+      this.player.update(dt);
 
-    // Door interactions
-    if (
-      !this.player.dead &&
-      this.player.grounded &&
-      Input.isAnyJustPressed("ArrowUp", "KeyW")
-    ) {
-      const px = this.player.container.x;
-      const py = this.player.container.y;
-      for (const d of this.doors) {
-        const iz = d.interactionZone();
-        if (
-          px >= iz.x &&
-          px <= iz.x + iz.w &&
-          py >= iz.y &&
-          py <= iz.y + iz.h
-        ) {
-          d.interact();
+      // Door interactions
+      if (
+        !this.player.dead &&
+        this.player.grounded &&
+        Input.isAnyJustPressed("ArrowUp", "KeyW")
+      ) {
+        const px = this.player.container.x;
+        const py = this.player.container.y;
+        for (const d of this.doors) {
+          const iz = d.interactionZone();
+          if (
+            px >= iz.x &&
+            px <= iz.x + iz.w &&
+            py >= iz.y &&
+            py <= iz.y + iz.h
+          ) {
+            d.interact();
+          }
         }
       }
     }
 
-    // When dead, pass off-screen coords so enemies lose detection and resume patrol
-    const playerX = this.player.dead ? -9999 : this.player.container.x;
-    const playerY = this.player.dead ? -9999 : this.player.container.y;
+    // Before control is handed over (or once dead), pass off-screen coords so
+    // enemies lose detection and just patrol/idle instead of reacting
+    const playerX =
+      !this.intro.hasControl || this.player.dead ? -9999 : this.player.container.x;
+    const playerY =
+      !this.intro.hasControl || this.player.dead ? -9999 : this.player.container.y;
     const playerMoving = Math.abs(playerX - this.lastPlayerX) > 0.1;
     this.lastPlayerX = playerX;
 

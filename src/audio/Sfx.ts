@@ -1,6 +1,7 @@
 import { getAudioContext } from "./audioContext";
 
 const buffers = new Map<string, AudioBuffer>();
+const activeLoops = new Map<string, AudioBufferSourceNode>();
 
 async function load(sounds: Record<string, string>, onFileLoaded?: () => void) {
   const ctx = getAudioContext();
@@ -37,4 +38,29 @@ function play(
   source.start();
 }
 
-export const Sfx = { load, play };
+function loop(name: string, options: { volume?: number } = {}) {
+  if (activeLoops.has(name)) return; // already looping
+  const buffer = buffers.get(name);
+  if (!buffer) return;
+
+  const ctx = getAudioContext();
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+  source.loop = true;
+
+  const gain = ctx.createGain();
+  gain.gain.value = options.volume ?? 1;
+
+  source.connect(gain).connect(ctx.destination);
+  source.start();
+  activeLoops.set(name, source);
+}
+
+function stopLoop(name: string) {
+  const source = activeLoops.get(name);
+  if (!source) return;
+  source.stop();
+  activeLoops.delete(name);
+}
+
+export const Sfx = { load, play, loop, stopLoop };
