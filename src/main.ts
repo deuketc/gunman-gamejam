@@ -4,6 +4,7 @@ import { Game } from "./Game";
 import { MusicPlayer } from "./audio/MusicPlayer";
 import { Sfx } from "./audio/Sfx";
 import { Preloader } from "./Preloader";
+import { StartScreen } from "./StartScreen";
 
 const TEXTURE_URLS = [
   "/assets/background_01_720.png",
@@ -109,12 +110,23 @@ async function main() {
 
   app.stage.removeChild(preloader.container);
 
-  // Starts 10s into the file. Actual sound is still gated by the browser's
-  // autoplay policy internally — MusicPlayer resumes itself on the player's
-  // first keypress/click if the browser wouldn't otherwise allow audio yet.
-  // Deliberately not awaited/gated behind the preloader — it depends on a
-  // CDN fetch for soundfont samples, which is slower and more variable than
-  // the local assets, so the game shouldn't wait on it to appear.
+  // Gate audio behind an explicit user click — Chrome (and others) refuse to
+  // run an AudioContext until a real user gesture happens on the page, and
+  // will log a warning if something tries to resume one before that. The
+  // Start button click itself satisfies that requirement, so everything
+  // audio-related only starts from here on.
+  await new Promise<void>((resolve) => {
+    const startScreen = new StartScreen(app.screen.width, app.screen.height);
+    startScreen.onStart = () => {
+      app.stage.removeChild(startScreen.container);
+      resolve();
+    };
+    app.stage.addChild(startScreen.container);
+  });
+
+  // Starts 10s into the file. Deliberately not awaited — it depends on a CDN
+  // fetch for soundfont samples, which is slower and more variable than the
+  // local assets, so the game shouldn't wait on it to appear.
   const music = new MusicPlayer("/assets/bgm.mid", 0.4, 3);
   music.start().catch((err) => console.error("Failed to start music:", err));
 
