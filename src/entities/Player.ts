@@ -191,6 +191,7 @@ export class Player {
   private idleTimer = 0;
   private lastFacingLeft = false;
   private hangPlatformY = 0;
+  private dropGrabCooldown = 0; // suppresses re-grabbing the ledge just dropped from
   private pullUpYOffset = PULL_UP_Y_OFFSET; // set per hang type so pull-up aligns correctly
   private ladders: Ladder[] = [];
   private activeLadder: Ladder | null = null;
@@ -808,6 +809,7 @@ export class Player {
     else if (this.state === "jump-hang-left") this.state = "jump-left";
     else this.state = "jump-right";
     this.velocityY = 2; // nudge downward so physics take over
+    this.dropGrabCooldown = 30; // ~0.25s — long enough to clear the ledge before re-grab checks resume
   }
 
   private startTurnBack() {
@@ -930,13 +932,15 @@ export class Player {
       );
       const prevY = this.container.y;
       this.container.y += this.velocityY;
+      if (this.dropGrabCooldown > 0) this.dropGrabCooldown--;
 
       // --- Platform grab: detection zone top meets a platform edge ---
       if (
-        this.state === "platform-jump-right" ||
-        this.state === "platform-jump-left" ||
-        this.state === "jump-right" ||
-        this.state === "jump-left"
+        this.dropGrabCooldown <= 0 &&
+        (this.state === "platform-jump-right" ||
+          this.state === "platform-jump-left" ||
+          this.state === "jump-right" ||
+          this.state === "jump-left")
       ) {
         const isLongJump =
           this.state === "jump-right" || this.state === "jump-left";
