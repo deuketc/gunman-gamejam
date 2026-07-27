@@ -48,6 +48,10 @@ const TEXTURE_URLS = [
   "/assets/music-toggle.png",
   "/assets/player-ani-sprint.png",
   "/assets/arrow.png",
+  "/assets/door-02-ani-open.png",
+  "/assets/door-02-static-light.png",
+  "/assets/keypad_ani_locked.png",
+  "/assets/keypad_ani_unlocked.png",
   "https://pixijs.com/assets/spritesheet/mc.json",
 ];
 
@@ -69,6 +73,7 @@ const SFX_URLS = {
   opendoor: "/assets/sfx/opendoor.wav",
   deathplayer: "/assets/sfx/deathplayer.wav",
   arrow: "/assets/sfx/arrow.wav",
+  "door2-unlock": "/assets/sfx/door2-unlock.wav",
 };
 
 async function main() {

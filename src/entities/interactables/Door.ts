@@ -8,22 +8,37 @@ const DOOR_FRAME_H = 125;
 const DOOR_FRAMES = 10;
 const DOOR_ANIM_SPEED = 0.2;
 
+export interface DoorConfig {
+  path?: string;
+  frameW?: number;
+  frameH?: number;
+  frameCount?: number;
+  locked?: boolean; // starts locked — interact() is a no-op until unlocked is set to false
+}
+
 export class Door {
   readonly container: Container;
   opened = false;
+  locked: boolean;
   onOpen?: () => void;
   private sprite: AnimatedSprite;
 
-  constructor(x: number, y: number) {
+  constructor(x: number, y: number, config: DoorConfig = {}) {
+    this.locked = config.locked ?? false;
     this.container = new Container();
 
-    const sheet = Assets.get<Texture>(DOOR_PATH);
+    const path = config.path ?? DOOR_PATH;
+    const frameW = config.frameW ?? DOOR_FRAME_W;
+    const frameH = config.frameH ?? DOOR_FRAME_H;
+    const frameCount = config.frameCount ?? DOOR_FRAMES;
+
+    const sheet = Assets.get<Texture>(path);
     const frames = Array.from(
-      { length: DOOR_FRAMES },
+      { length: frameCount },
       (_, i) =>
         new Texture({
           source: sheet.source,
-          frame: new Rectangle(i * DOOR_FRAME_W, 0, DOOR_FRAME_W, DOOR_FRAME_H),
+          frame: new Rectangle(i * frameW, 0, frameW, frameH),
         }),
     );
 
@@ -43,7 +58,7 @@ export class Door {
   }
 
   interact() {
-    if (this.opened || this.sprite.playing) return;
+    if (this.locked || this.opened || this.sprite.playing) return;
     this.sprite.currentFrame = 0;
     this.sprite.play();
     Sfx.play("opendoor");

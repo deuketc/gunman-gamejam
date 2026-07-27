@@ -13,6 +13,8 @@ import {
 import { EnemyDrone } from "../entities/enemies/EnemyDrone";
 import { EnemyLaser } from "../entities/projectiles/EnemyLaser";
 import { Door } from "../entities/interactables/Door";
+import { Keypad } from "../entities/interactables/Keypad";
+import { DoorLight } from "../entities/interactables/DoorLight";
 import { Inventory } from "../entities/Inventory";
 import { GrenadeProjectile } from "../entities/projectiles/GrenadeProjectile";
 import { Explosion } from "../entities/Explosion";
@@ -23,6 +25,12 @@ import { IntroSequence } from "../entities/IntroSequence";
 
 function pointInRect(px: number, py: number, r: Rect): boolean {
   return px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h;
+}
+
+function rectsOverlap(a: Rect, b: Rect): boolean {
+  return (
+    a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
+  );
 }
 
 export class GameScene {
@@ -38,6 +46,7 @@ export class GameScene {
   private platforms: Platform[] = [];
   private ladders: Ladder[] = [];
   private doors: Door[] = [];
+  private keypad!: Keypad;
   private inventory!: Inventory;
   private musicToggle!: MusicToggleButton;
   private grenades: GrenadeProjectile[] = [];
@@ -96,6 +105,27 @@ export class GameScene {
     };
     this.doors.push(door);
     this.container.addChild(door.container);
+
+    // Door 2 — starts locked; unlocked via the keypad
+    const door2Light = new DoorLight(43, 9);
+    this.container.addChild(door2Light.container);
+
+    const door2 = new Door(55, 53, {
+      path: "/assets/door-02-ani-open.png",
+      frameW: 84,
+      frameH: 143,
+      frameCount: 10,
+      locked: true,
+    });
+    this.doors.push(door2);
+    this.container.addChild(door2.container);
+
+    this.keypad = new Keypad(888, 543);
+    this.keypad.onUnlock = () => {
+      door2.locked = false;
+      door2Light.setUnlocked();
+    };
+    this.container.addChild(this.keypad.container);
 
     this.player = new Player(274, groundY, this.screenW, groundY);
     this.player.setPlatforms(this.platforms);
@@ -156,15 +186,23 @@ export class GameScene {
             d.interact();
           }
         }
+
+        if (rectsOverlap(this.player.detectionZone(), this.keypad.hitbox())) {
+          this.keypad.interact();
+        }
       }
     }
 
     // Before control is handed over (or once dead), pass off-screen coords so
     // enemies lose detection and just patrol/idle instead of reacting
     const playerX =
-      !this.intro.hasControl || this.player.dead ? -9999 : this.player.container.x;
+      !this.intro.hasControl || this.player.dead
+        ? -9999
+        : this.player.container.x;
     const playerY =
-      !this.intro.hasControl || this.player.dead ? -9999 : this.player.container.y;
+      !this.intro.hasControl || this.player.dead
+        ? -9999
+        : this.player.container.y;
     const playerMoving = Math.abs(playerX - this.lastPlayerX) > 0.1;
     this.lastPlayerX = playerX;
 
@@ -312,6 +350,13 @@ export class GameScene {
         const iz = d.interactionZone();
         this.debugGfx
           .rect(iz.x, iz.y, iz.w, iz.h)
+          .fill({ color: 0xff00ff, alpha: 0.15 })
+          .stroke({ color: 0xff00ff, width: 1 });
+      }
+      {
+        const khb = this.keypad.hitbox();
+        this.debugGfx
+          .rect(khb.x, khb.y, khb.w, khb.h)
           .fill({ color: 0xff00ff, alpha: 0.15 })
           .stroke({ color: 0xff00ff, width: 1 });
       }
