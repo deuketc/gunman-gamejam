@@ -16,12 +16,14 @@ import { Door } from "../entities/interactables/Door";
 import { Keypad } from "../entities/interactables/Keypad";
 import { DoorLight } from "../entities/interactables/DoorLight";
 import { Inventory } from "../entities/Inventory";
+import { Medal } from "../entities/Medal";
 import { GrenadeProjectile } from "../entities/projectiles/GrenadeProjectile";
 import { Explosion } from "../entities/Explosion";
 import { Sfx } from "../audio/Sfx";
 import type { MusicPlayer } from "../audio/MusicPlayer";
 import { MusicToggleButton } from "../entities/MusicToggleButton";
 import { IntroSequence } from "../entities/IntroSequence";
+import { DeathScreen } from "../entities/DeathScreen";
 
 function pointInRect(px: number, py: number, r: Rect): boolean {
   return px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h;
@@ -48,6 +50,7 @@ export class GameScene {
   private doors: Door[] = [];
   private keypad!: Keypad;
   private inventory!: Inventory;
+  private medal!: Medal;
   private musicToggle!: MusicToggleButton;
   private grenades: GrenadeProjectile[] = [];
   private explosions: Explosion[] = [];
@@ -55,6 +58,7 @@ export class GameScene {
   private debugGfx: Graphics;
   private intro: IntroSequence;
   private introDone = false;
+  private deathScreen!: DeathScreen;
 
   constructor(app: Application, music: MusicPlayer) {
     this.screenW = app.screen.width;
@@ -117,6 +121,7 @@ export class GameScene {
       frameCount: 10,
       locked: true,
     });
+    door2.onOpen = () => this.medal.award();
     this.doors.push(door2);
     this.container.addChild(door2.container);
 
@@ -142,12 +147,19 @@ export class GameScene {
     this.inventory = new Inventory(this.screenW, this.screenH);
     this.container.addChild(this.inventory.container);
 
+    this.medal = new Medal(48, this.screenH - 8);
+    this.container.addChild(this.medal.container);
+
     this.musicToggle = new MusicToggleButton(this.screenW, music);
     this.container.addChild(this.musicToggle.container);
 
     // Intro sits above everything — covers the whole scene during the fade
     this.intro = new IntroSequence(this.screenW, this.screenH, groundY, 274);
     this.container.addChild(this.intro.container);
+
+    // Death screen sits above absolutely everything, including the intro
+    this.deathScreen = new DeathScreen(this.screenW, this.screenH);
+    this.container.addChild(this.deathScreen.container);
   }
 
   update(dt: number) {
@@ -162,6 +174,8 @@ export class GameScene {
 
     // Toggle debug overlay
     if (Input.isJustPressed("Backquote")) this.debugMode = !this.debugMode;
+
+    this.deathScreen.update(this.player.dead);
 
     if (this.intro.hasControl) {
       this.player.setHasGrenade(this.inventory.grenadeCount > 0);

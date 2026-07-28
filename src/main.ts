@@ -44,7 +44,8 @@ const TEXTURE_URLS = [
   "/assets/tvman-ani-stumble.png",
   "/assets/tvman-ani-stumble02.png",
   "/assets/tvman-ani-stumble03.png",
-  "/assets/granade_inventory.png",
+  "/assets/grenade_static_icon.png",
+  "/assets/medal_static_icon.png",
   "/assets/music-toggle.png",
   "/assets/player-ani-sprint.png",
   "/assets/arrow.png",
@@ -52,6 +53,7 @@ const TEXTURE_URLS = [
   "/assets/door-02-static-light.png",
   "/assets/keypad_ani_locked.png",
   "/assets/keypad_ani_unlocked.png",
+  "/assets/skull.png",
   "https://pixijs.com/assets/spritesheet/mc.json",
 ];
 

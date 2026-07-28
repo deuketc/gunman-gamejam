@@ -1,7 +1,7 @@
 import { AnimatedSprite, Assets, Container, Rectangle, Texture } from "pixi.js";
 
-const INV_PATH       = "/assets/granade_inventory.png";
-const INV_FRAME_SIZE = 16;
+const INV_PATH       = "/assets/grenade_static_icon.png";
+const INV_FRAME_SIZE = 32;
 
 export class Inventory {
   readonly container: Container;
