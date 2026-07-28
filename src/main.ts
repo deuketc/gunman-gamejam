@@ -1,4 +1,5 @@
 import "./style.css";
+import "@fontsource/press-start-2p/400.css";
 import { Application, Assets } from "pixi.js";
 import { Game } from "./Game";
 import { MusicPlayer } from "./audio/MusicPlayer";
@@ -54,6 +55,7 @@ const TEXTURE_URLS = [
   "/assets/keypad_ani_locked.png",
   "/assets/keypad_ani_unlocked.png",
   "/assets/skull.png",
+  "/assets/billboard.png",
   "https://pixijs.com/assets/spritesheet/mc.json",
 ];
 
@@ -113,6 +115,9 @@ async function main() {
       sfxLoaded++;
       updateProgress();
     }),
+    // Pixi's Text rasterizes via canvas and won't re-render on its own once a
+    // webfont finishes loading, so it must be ready before any Text is created.
+    document.fonts.load('16px "Press Start 2P"', "START F5 to restart"),
   ]);
 
   app.stage.removeChild(preloader.container);

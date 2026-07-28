@@ -24,6 +24,7 @@ import type { MusicPlayer } from "../audio/MusicPlayer";
 import { MusicToggleButton } from "../entities/MusicToggleButton";
 import { IntroSequence } from "../entities/IntroSequence";
 import { DeathScreen } from "../entities/DeathScreen";
+import { BackgroundSprite } from "../entities/BackgroundSprite";
 
 function pointInRect(px: number, py: number, r: Rect): boolean {
   return px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h;
@@ -75,6 +76,15 @@ export class GameScene {
     const ground = new Graphics();
     ground.moveTo(0, groundY).lineTo(this.screenW, groundY);
     this.container.addChild(ground);
+
+    // Background decoration — purely visual, no gameplay logic
+    const billboard = new BackgroundSprite(616, 48, {
+      path: "/assets/billboard.png",
+      frameW: 43,
+      frameH: 21,
+      frameCount: 15,
+    });
+    this.container.addChild(billboard.container);
 
     const enemy1 = new EnemyStatic(this.screenW - 76, groundY, ENEMY_V1);
     this.enemies.push(enemy1);

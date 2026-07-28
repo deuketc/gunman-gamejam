@@ -35,7 +35,7 @@ export class DeathScreen {
 
     this.label = new Text({
       text: "F5 to restart",
-      style: { fill: 0xffffff, fontSize: 24, fontWeight: "bold" },
+      style: { fill: 0xffffff, fontSize: 16, fontFamily: '"Press Start 2P"' },
     });
     this.label.anchor.set(0.5);
     this.label.position.set(screenW / 2, screenH / 2 + 30);

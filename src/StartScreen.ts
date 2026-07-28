@@ -24,7 +24,7 @@ export class StartScreen {
 
     const label = new Text({
       text: "START",
-      style: { fill: 0xffffff, fontSize: 28, fontWeight: "bold" },
+      style: { fill: 0xffffff, fontSize: 18, fontFamily: '"Press Start 2P"' },
     });
     label.anchor.set(0.5);
     label.position.set(screenW / 2, screenH / 2);
