@@ -39,7 +39,8 @@ type PlayerState =
   | "fall-land-left"
   | "ladder"
   | "throw-right"
-  | "throw-left";
+  | "throw-left"
+  | "win";
 
 interface PendingBullet {
   x: number;
@@ -111,6 +112,13 @@ const THROW_FRAMES = 9;
 const THROW_SPAWN_FRAME = 6;
 const THROW_ANIM_SPEED = 0.2;
 
+const WIN_PATH = "/assets/player-ani-winning.png";
+const WIN_FRAME_W = 128;
+const WIN_FRAME_H = 128;
+const WIN_FRAMES = 10;
+const WIN_Y_OFFSET = 0;
+const WIN_ANIM_SPEED = 0.2;
+
 const LADDER_PATH = "/assets/player-ani-ladder-climb.png";
 const LADDER_FRAME_W = 128;
 const LADDER_FRAME_H = 256;
@@ -173,6 +181,7 @@ function cropFrames(
 export class Player {
   readonly container: Container;
   dead = false;
+  won = false;
   private sprite: AnimatedSprite;
   private deathFrames: Texture[] = [];
   private textures: Record<PlayerState, Texture[]>;
@@ -223,6 +232,7 @@ export class Player {
     const ljR = Assets.get<Texture>(LONG_JUMP_PATH);
     const throwR = Assets.get<Texture>(THROW_PATH);
     const ladderSheet = Assets.get<Texture>(LADDER_PATH);
+    const winR = Assets.get<Texture>(WIN_PATH);
 
     const standR = new Texture({
       source: stand.source,
@@ -451,6 +461,7 @@ export class Player {
         THROW_FRAME_W,
         THROW_FRAME_H,
       ),
+      win: cropFrames(winR, 0, WIN_FRAMES, WIN_FRAME_W, WIN_FRAME_H),
     };
 
     this.sprite = new AnimatedSprite(this.textures["idle-front"]);
@@ -685,6 +696,12 @@ export class Player {
       this.sprite.loop = false;
       this.sprite.currentFrame = 0;
       this.sprite.play();
+    } else if (next === "win") {
+      this.sprite.position.set(0, WIN_Y_OFFSET);
+      this.sprite.animationSpeed = WIN_ANIM_SPEED;
+      this.sprite.loop = false;
+      this.sprite.currentFrame = 0;
+      this.sprite.play();
     } else if (next === "ladder") {
       this.sprite.position.set(0, LADDER_Y_OFFSET);
       this.sprite.animationSpeed = LADDER_ANIM_SPEED;
@@ -711,6 +728,14 @@ export class Player {
     this.sprite.currentFrame = 0;
     this.sprite.play();
     Sfx.play("deathplayer");
+  }
+
+  win() {
+    if (this.dead || this.won) return;
+    this.won = true;
+    this.velocityX = 0;
+    this.velocityY = 0;
+    this.setState("win");
   }
 
   get grounded(): boolean {
@@ -841,7 +866,7 @@ export class Player {
   }
 
   update(_dt: number) {
-    if (this.dead) return;
+    if (this.dead || this.won) return;
 
     const left = Input.isAnyDown("ArrowLeft", "KeyA");
     const right = Input.isAnyDown("ArrowRight", "KeyD");

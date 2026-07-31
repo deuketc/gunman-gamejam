@@ -60,8 +60,12 @@ export class GameScene {
   private intro: IntroSequence;
   private introDone = false;
   private deathScreen!: DeathScreen;
+  private music: MusicPlayer;
+  private winZone: Rect;
+  private winTriggered = false;
 
   constructor(app: Application, music: MusicPlayer) {
+    this.music = music;
     this.screenW = app.screen.width;
     this.screenH = app.screen.height;
     this.groundY = this.screenH - 58;
@@ -111,6 +115,17 @@ export class GameScene {
 
     // Ladder connecting platform #1 (top-left) to platform #2 (middle)
     this.ladders = [{ x: 381, y: groundY - 460, w: 50, h: 240 }];
+
+    // End-of-game trigger — invisible, sits at the far (right) end of the
+    // top-right platform (#4). Reaching it plays the win animation, stops
+    // controls, and cuts the music.
+    const winPlatform = this.platforms[3];
+    this.winZone = {
+      x: winPlatform.x + winPlatform.w - 90,
+      y: winPlatform.y - 140,
+      w: 90,
+      h: 140,
+    };
 
     const door = new Door(75, 519);
     door.onOpen = () => {
@@ -191,9 +206,23 @@ export class GameScene {
       this.player.setHasGrenade(this.inventory.grenadeCount > 0);
       this.player.update(dt);
 
+      // End-of-game trigger — reaching the far edge of the top-right platform
+      // plays the win animation, cuts controls, and stops the music.
+      if (
+        !this.winTriggered &&
+        !this.player.dead &&
+        rectsOverlap(this.player.detectionZone(), this.winZone)
+      ) {
+        this.winTriggered = true;
+        this.player.win();
+        this.music.stop();
+        Sfx.play("win");
+      }
+
       // Door interactions
       if (
         !this.player.dead &&
+        !this.player.won &&
         this.player.grounded &&
         Input.isAnyJustPressed("ArrowUp", "KeyW")
       ) {
@@ -383,6 +412,13 @@ export class GameScene {
           .rect(khb.x, khb.y, khb.w, khb.h)
           .fill({ color: 0xff00ff, alpha: 0.15 })
           .stroke({ color: 0xff00ff, width: 1 });
+      }
+      {
+        const wz = this.winZone;
+        this.debugGfx
+          .rect(wz.x, wz.y, wz.w, wz.h)
+          .fill({ color: 0x00ffaa, alpha: 0.15 })
+          .stroke({ color: 0x00ffaa, width: 1 });
       }
       for (const e of this.enemies) {
         const dz = e.detectionZone();

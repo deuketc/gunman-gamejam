@@ -56,6 +56,7 @@ const TEXTURE_URLS = [
   "/assets/keypad_ani_unlocked.png",
   "/assets/skull.png",
   "/assets/billboard.png",
+  "/assets/player-ani-winning.png",
   "https://pixijs.com/assets/spritesheet/mc.json",
 ];
 
@@ -78,6 +79,7 @@ const SFX_URLS = {
   deathplayer: "/assets/sfx/deathplayer.wav",
   arrow: "/assets/sfx/arrow.wav",
   "door2-unlock": "/assets/sfx/door2-unlock.wav",
+  win: "/assets/sfx/win.wav",
 };
 
 async function main() {
