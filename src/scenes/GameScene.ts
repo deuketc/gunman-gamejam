@@ -24,6 +24,7 @@ import type { MusicPlayer } from "../audio/MusicPlayer";
 import { MusicToggleButton } from "../entities/MusicToggleButton";
 import { IntroSequence } from "../entities/IntroSequence";
 import { DeathScreen } from "../entities/DeathScreen";
+import { WinScreen } from "../entities/WinScreen";
 import { BackgroundSprite } from "../entities/BackgroundSprite";
 
 function pointInRect(px: number, py: number, r: Rect): boolean {
@@ -60,9 +61,12 @@ export class GameScene {
   private intro: IntroSequence;
   private introDone = false;
   private deathScreen!: DeathScreen;
+  private winScreen!: WinScreen;
   private music: MusicPlayer;
   private winZone: Rect;
   private winTriggered = false;
+  private medalAcquired = false;
+  private usedGrenade = false;
 
   constructor(app: Application, music: MusicPlayer) {
     this.music = music;
@@ -146,7 +150,10 @@ export class GameScene {
       frameCount: 10,
       locked: true,
     });
-    door2.onOpen = () => this.medal.award();
+    door2.onOpen = () => {
+      this.medal.award();
+      this.medalAcquired = true;
+    };
     this.doors.push(door2);
     this.container.addChild(door2.container);
 
@@ -184,7 +191,15 @@ export class GameScene {
 
     // Death screen sits above absolutely everything, including the intro
     this.deathScreen = new DeathScreen(this.screenW, this.screenH);
+    this.deathScreen.onFadeStart = () => {
+      this.music.stop();
+      Sfx.play("lose");
+    };
     this.container.addChild(this.deathScreen.container);
+
+    // Win screen — same layer as the death screen (mutually exclusive)
+    this.winScreen = new WinScreen(this.screenW, this.screenH);
+    this.container.addChild(this.winScreen.container);
   }
 
   update(dt: number) {
@@ -201,6 +216,11 @@ export class GameScene {
     if (Input.isJustPressed("Backquote")) this.debugMode = !this.debugMode;
 
     this.deathScreen.update(this.player.dead);
+    this.winScreen.update(this.player.winComplete, {
+      medal: this.medalAcquired,
+      grenade: this.usedGrenade,
+      enemiesDown: this.enemies.every((e) => e.dead),
+    });
 
     if (this.intro.hasControl) {
       this.player.setHasGrenade(this.inventory.grenadeCount > 0);
@@ -316,6 +336,7 @@ export class GameScene {
         const grenade = new GrenadeProjectile(g.x, g.y, g.facingLeft);
         this.grenades.push(grenade);
         this.container.addChild(grenade.container);
+        this.usedGrenade = true;
       }
     }
 

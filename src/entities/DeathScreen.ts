@@ -14,6 +14,7 @@ type Phase = "waiting" | "fading" | "done";
 // once triggered this just sits there waiting for the player to hit F5.
 export class DeathScreen {
   readonly container: Container;
+  onFadeStart?: () => void;
   private overlay: Graphics;
   private skull: Sprite;
   private label: Text;
@@ -51,6 +52,7 @@ export class DeathScreen {
       if (this.timer >= DEATH_DELAY_TICKS) {
         this.phase = "fading";
         this.timer = 0;
+        this.onFadeStart?.();
       }
       return;
     }

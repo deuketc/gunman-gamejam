@@ -80,6 +80,7 @@ const SFX_URLS = {
   arrow: "/assets/sfx/arrow.wav",
   "door2-unlock": "/assets/sfx/door2-unlock.wav",
   win: "/assets/sfx/win.wav",
+  lose: "/assets/sfx/lose.wav",
 };
 
 async function main() {

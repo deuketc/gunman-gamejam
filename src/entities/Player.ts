@@ -206,6 +206,7 @@ export class Player {
   private activeLadder: Ladder | null = null;
   private ladderFrameAccum = 0;
   private hasGrenade = false;
+  private winAnimDone = false;
 
   constructor(x: number, y: number, screenW: number, groundY: number) {
     this.screenW = screenW;
@@ -582,6 +583,9 @@ export class Player {
           this.isGrounded = true;
           this.setState("idle-left");
           break;
+        case "win":
+          this.winAnimDone = true;
+          break;
       }
     };
 
@@ -740,6 +744,10 @@ export class Player {
 
   get grounded(): boolean {
     return this.isGrounded;
+  }
+
+  get winComplete(): boolean {
+    return this.winAnimDone;
   }
 
   hurtbox(): Rect {
