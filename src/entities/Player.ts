@@ -822,7 +822,7 @@ export class Player {
     const left = this.facingLeft();
     const base = left ? Math.PI : 0;
     const barrelX = this.container.x + (left ? -55 : 55);
-    const barrelY = this.container.y - 89;
+    const barrelY = this.container.y - 94;
     this.pendingBullets.push({ x: barrelX, y: barrelY, angle: base });
     Sfx.play("gunshot");
   }
@@ -1051,7 +1051,8 @@ export class Player {
     // --- IDLE FRONT: any input exits back to last facing direction ---
     if (this.state === "idle-front") {
       const throwJust = Input.isJustPressed("KeyG") && this.hasGrenade;
-      if (!left && !right && !jump && !turnKey && !shootJust && !throwJust) return;
+      if (!left && !right && !jump && !turnKey && !shootJust && !throwJust)
+        return;
       this.idleTimer = 0;
       this.setState(this.lastFacingLeft ? "idle-left" : "idle-right");
       // fall through so the input is handled this frame

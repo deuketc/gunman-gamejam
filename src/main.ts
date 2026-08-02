@@ -57,6 +57,8 @@ const TEXTURE_URLS = [
   "/assets/skull.png",
   "/assets/billboard.png",
   "/assets/player-ani-winning.png",
+  "/assets/foreground-static-01.png",
+  "/assets/start-button-static.png",
   "https://pixijs.com/assets/spritesheet/mc.json",
 ];
 
@@ -95,6 +97,10 @@ async function main() {
 
   document.body.appendChild(app.canvas);
 
+  // Preloader's own frame graphic must be loaded before it's constructed —
+  // it's shown while everything in TEXTURE_URLS is still loading.
+  await Assets.load("/assets/preloader-static.png");
+
   const preloader = new Preloader(app.screen.width, app.screen.height);
   app.stage.addChild(preloader.container);
 
@@ -106,7 +112,9 @@ async function main() {
   let textureFraction = 0;
   let sfxLoaded = 0;
   const updateProgress = () => {
-    preloader.setProgress((textureFraction * TEXTURE_URLS.length + sfxLoaded) / totalItems);
+    preloader.setProgress(
+      (textureFraction * TEXTURE_URLS.length + sfxLoaded) / totalItems,
+    );
   };
 
   await Promise.all([

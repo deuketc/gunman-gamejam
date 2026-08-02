@@ -26,6 +26,7 @@ import { IntroSequence } from "../entities/IntroSequence";
 import { DeathScreen } from "../entities/DeathScreen";
 import { WinScreen } from "../entities/WinScreen";
 import { BackgroundSprite } from "../entities/BackgroundSprite";
+import { Rain } from "../entities/Rain";
 
 function pointInRect(px: number, py: number, r: Rect): boolean {
   return px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h;
@@ -67,6 +68,7 @@ export class GameScene {
   private winTriggered = false;
   private medalAcquired = false;
   private usedGrenade = false;
+  private rain: Rain;
 
   constructor(app: Application, music: MusicPlayer) {
     this.music = music;
@@ -80,6 +82,9 @@ export class GameScene {
     bg.width = this.screenW;
     bg.height = this.screenH;
     this.container.addChild(bg);
+
+    this.rain = new Rain(this.screenW, this.screenH);
+    this.container.addChild(this.rain.container);
 
     const ground = new Graphics();
     ground.moveTo(0, groundY).lineTo(this.screenW, groundY);
@@ -171,6 +176,15 @@ export class GameScene {
     this.lastPlayerX = 124;
     this.container.addChild(this.player.container);
 
+    // Run-in sprite sits at gameplay depth, same as the player, so
+    // foreground props occlude it correctly (see fadeContainer below).
+    this.intro = new IntroSequence(this.screenW, this.screenH, groundY, 274);
+    this.container.addChild(this.intro.container);
+
+    const foreground1 = Sprite.from("/assets/foreground-static-01.png");
+    foreground1.position.set(21, 555);
+    this.container.addChild(foreground1);
+
     // Debug overlay always on top
     this.debugGfx = new Graphics();
     this.container.addChild(this.debugGfx);
@@ -185,9 +199,8 @@ export class GameScene {
     this.musicToggle = new MusicToggleButton(this.screenW, music);
     this.container.addChild(this.musicToggle.container);
 
-    // Intro sits above everything — covers the whole scene during the fade
-    this.intro = new IntroSequence(this.screenW, this.screenH, groundY, 274);
-    this.container.addChild(this.intro.container);
+    // Intro's fade rect sits above everything — covers the whole scene during the fade
+    this.container.addChild(this.intro.fadeContainer);
 
     // Death screen sits above absolutely everything, including the intro
     this.deathScreen = new DeathScreen(this.screenW, this.screenH);
@@ -203,11 +216,13 @@ export class GameScene {
   }
 
   update(dt: number) {
+    this.rain.update(dt);
+
     if (!this.introDone) {
       this.intro.update(dt);
       if (this.intro.hasControl) this.player.container.visible = true;
       if (this.intro.finished) {
-        this.container.removeChild(this.intro.container);
+        this.container.removeChild(this.intro.container, this.intro.fadeContainer);
         this.introDone = true;
       }
     }

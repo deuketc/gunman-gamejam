@@ -35,7 +35,12 @@ function cropFrames(sheet: Texture, count: number, fw: number, fh: number): Text
 // arrow. GameScene gates normal gameplay (player input, enemy updates, etc.)
 // on `hasControl` until the run finishes.
 export class IntroSequence {
+  // Sprint + arrow sit at gameplay depth (added alongside the player) so
+  // foreground props correctly occlude the run-in, same as they would the
+  // real player. The fade rect is separate and sits above everything,
+  // including the HUD, so it can cover the whole scene while fading in.
   readonly container: Container;
+  readonly fadeContainer: Container;
   private phase: Phase = "fade";
   private timer = 0;
   private targetX: number;
@@ -49,10 +54,11 @@ export class IntroSequence {
 
   constructor(screenW: number, screenH: number, groundY: number, targetX: number) {
     this.container = new Container();
+    this.fadeContainer = new Container();
     this.targetX = targetX;
 
     this.fadeRect = new Graphics().rect(0, 0, screenW, screenH).fill(0x000000);
-    this.container.addChild(this.fadeRect);
+    this.fadeContainer.addChild(this.fadeRect);
 
     const sprintSheet = Assets.get<Texture>(SPRINT_PATH);
     const sprintFrames = cropFrames(sprintSheet, SPRINT_FRAME_COUNT, SPRINT_FRAME_W, SPRINT_FRAME_H);
@@ -96,7 +102,7 @@ export class IntroSequence {
       const t = Math.min(1, this.timer / FADE_TICKS);
       this.fadeRect.alpha = 1 - t;
       if (t >= 1) {
-        this.container.removeChild(this.fadeRect);
+        this.fadeContainer.removeChild(this.fadeRect);
         this.phase = "run";
         this.timer = 0;
       }
