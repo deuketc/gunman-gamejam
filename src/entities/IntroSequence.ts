@@ -8,15 +8,15 @@ const SPRINT_FRAME_COUNT = 13;
 const SPRINT_ANIM_SPEED = 0.35;
 const SPRINT_SPEED = 4; // px per logic tick (fixed 120Hz sim rate — see Game.ts)
 
-const ARROW_PATH = "/assets/arrow.png";
-const ARROW_FRAME_SIZE = 64;
-const ARROW_FRAME_COUNT = 21;
+const ARROW_PATH = "/assets/pointing-hand.png";
+const ARROW_FRAME_W = 95;
+const ARROW_FRAME_H = 47;
+const ARROW_FRAME_COUNT = 25;
 const ARROW_ANIM_SPEED = 0.2; // tweak so one playthrough is however long you want it on screen
-const ARROW_INSET_X = 100; // px from the right edge
-const ARROW_INSET_Y = 150; // px from the top edge
-// Assumes the source art faces right by default (common convention) — this
-// rotates it to point left, toward platform #1/the ladder. Tweak freely.
-const ARROW_ROTATION = Math.PI;
+const ARROW_INSET_X = 120; // px from the right edge
+const ARROW_INSET_Y = 140; // px from the top edge
+// pointing-hand.png already faces right by default — no rotation needed.
+const ARROW_ROTATION = 0;
 
 const FADE_TICKS = 3 * 120; // 3s at the fixed 120Hz logic rate
 
@@ -71,7 +71,7 @@ export class IntroSequence {
     this.container.addChild(this.sprintSprite);
 
     const arrowSheet = Assets.get<Texture>(ARROW_PATH);
-    const arrowFrames = cropFrames(arrowSheet, ARROW_FRAME_COUNT, ARROW_FRAME_SIZE, ARROW_FRAME_SIZE);
+    const arrowFrames = cropFrames(arrowSheet, ARROW_FRAME_COUNT, ARROW_FRAME_W, ARROW_FRAME_H);
     this.arrow = new AnimatedSprite(arrowFrames);
     this.arrow.anchor.set(0.5, 0.5);
     this.arrow.animationSpeed = ARROW_ANIM_SPEED;

@@ -1,8 +1,22 @@
-import { Container, Graphics, Text } from "pixi.js";
+import { AnimatedSprite, Assets, Container, Graphics, Rectangle, Text, Texture } from "pixi.js";
 
 const REVEAL_DELAY_TICKS = 3 * 120; // 3s after the win pose settles before the fade begins (fixed 120Hz logic rate — see Game.ts)
 const FADE_TICKS = 1 * 120; // 1s fade duration
 const FADE_ALPHA = 0.7;
+
+const DANCE_PATH = "/assets/tvman-ani-dance.png";
+const DANCE_FRAME_W = 128;
+const DANCE_FRAME_H = 128;
+const DANCE_FRAME_COUNT = 29;
+const DANCE_ANIM_SPEED = 0.25;
+
+function cropFrames(sheet: Texture, count: number, fw: number, fh: number): Texture[] {
+  return Array.from(
+    { length: count },
+    (_, i) =>
+      new Texture({ source: sheet.source, frame: new Rectangle(i * fw, 0, fw, fh) }),
+  );
+}
 
 export interface Achievements {
   medal: boolean;
@@ -28,6 +42,7 @@ export class WinScreen {
   private grenadeLine: Text;
   private enemiesLine: Text;
   private restart: Text;
+  private danceSprite: AnimatedSprite;
   private phase: Phase = "waiting";
   private timer = 0;
 
@@ -81,6 +96,17 @@ export class WinScreen {
     this.restart.position.set(cx, screenH / 2 + 90);
     this.restart.visible = false;
     this.container.addChild(this.restart);
+
+    const danceSheet = Assets.get<Texture>(DANCE_PATH);
+    const danceFrames = cropFrames(danceSheet, DANCE_FRAME_COUNT, DANCE_FRAME_W, DANCE_FRAME_H);
+    this.danceSprite = new AnimatedSprite(danceFrames);
+    this.danceSprite.anchor.set(0.5, 1);
+    this.danceSprite.animationSpeed = DANCE_ANIM_SPEED;
+    this.danceSprite.loop = true;
+    this.danceSprite.position.set(cx, screenH / 2 + 90 + 160);
+    this.danceSprite.visible = false;
+    this.danceSprite.play();
+    this.container.addChild(this.danceSprite);
   }
 
   update(winAnimDone: boolean, achievements: Achievements) {
@@ -106,11 +132,16 @@ export class WinScreen {
           achievements.enemiesDown,
         );
 
+        const allDone =
+          achievements.medal && achievements.grenade && achievements.enemiesDown;
+
+        this.title.text = allDone ? "MASTERY" : "WELL DONE!";
         this.title.visible = true;
         this.medalLine.visible = true;
         this.grenadeLine.visible = true;
         this.enemiesLine.visible = true;
         this.restart.visible = true;
+        this.danceSprite.visible = allDone;
         this.phase = "done";
       }
     }

@@ -148,7 +148,7 @@ export class GameScene {
     const door2Light = new DoorLight(43, 9);
     this.container.addChild(door2Light.container);
 
-    const door2 = new Door(55, 53, {
+    const door2 = new Door(55, 52, {
       path: "/assets/door-02-ani-open.png",
       frameW: 84,
       frameH: 143,
@@ -223,7 +223,10 @@ export class GameScene {
       this.intro.update(dt);
       if (this.intro.hasControl) this.player.container.visible = true;
       if (this.intro.finished) {
-        this.container.removeChild(this.intro.container, this.intro.fadeContainer);
+        this.container.removeChild(
+          this.intro.container,
+          this.intro.fadeContainer,
+        );
         this.introDone = true;
       }
     }
