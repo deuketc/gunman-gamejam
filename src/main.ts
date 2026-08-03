@@ -81,6 +81,7 @@ const SFX_URLS = {
   deathplayer: "/assets/sfx/deathplayer.wav",
   arrow: "/assets/sfx/arrow.wav",
   "door2-unlock": "/assets/sfx/door2-unlock.wav",
+  medal: "/assets/sfx/medal.wav",
   win: "/assets/sfx/win.wav",
   lose: "/assets/sfx/lose.wav",
 };
@@ -147,10 +148,9 @@ async function main() {
     app.stage.addChild(startScreen.container);
   });
 
-  // Starts 10s into the file. Deliberately not awaited — it depends on a CDN
-  // fetch for soundfont samples, which is slower and more variable than the
-  // local assets, so the game shouldn't wait on it to appear.
-  const music = new MusicPlayer("/assets/bgm.mid", 0.4, 3);
+  // Starts 3s into the file. Deliberately not awaited so the game doesn't
+  // wait on the decode before starting.
+  const music = new MusicPlayer("/assets/background_music.ogg", 0.4, 3);
   music.start().catch((err) => console.error("Failed to start music:", err));
 
   const game = new Game(app, music);

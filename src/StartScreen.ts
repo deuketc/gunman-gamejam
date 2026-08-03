@@ -29,7 +29,7 @@ export class StartScreen {
     this.container.addChild(title);
 
     const subtitle = new Text({
-      text: "64bit",
+      text: "BUILD 0x40",
       style: { fill: 0x8fb4c8, fontSize: 16, fontFamily: '"Press Start 2P"' },
     });
     subtitle.anchor.set(0.5);

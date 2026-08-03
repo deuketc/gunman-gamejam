@@ -158,6 +158,7 @@ export class GameScene {
     door2.onOpen = () => {
       this.medal.award();
       this.medalAcquired = true;
+      Sfx.play("medal");
     };
     this.doors.push(door2);
     this.container.addChild(door2.container);

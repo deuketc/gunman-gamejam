@@ -150,6 +150,7 @@ const IDLE_ANIM_SPEED = 0.1; // relaxed pace
 const IDLE_TRIGGER_FRAMES = 60; // 1 second at 60 fps
 const FRAME_W = 64;
 const FRAME_H = 64;
+const AIRBORNE_DETECTION_HALF_W = 10; // half-width of detectionZone() while airborne
 const WALK_FRAMES = 17;
 const SHOOT_CYCLE_FRAMES = 13; // frames 0–12 (raise + fire + reload)
 const SHOOT_LOWER_START = 12; // frames 12–14: put-away
@@ -772,7 +773,12 @@ export class Player {
       return { x: cx - 20, y: cy - 164, w: 40, h: 144 };
     }
     if (!this.isGrounded) {
-      return { x: cx - 20, y: cy - 104 + yShift, w: 40, h: 104 };
+      return {
+        x: cx - AIRBORNE_DETECTION_HALF_W,
+        y: cy - 104 + yShift,
+        w: AIRBORNE_DETECTION_HALF_W * 2,
+        h: 104,
+      };
     }
     return { x: cx - 24, y: cy - 116 + yShift, w: 48, h: 116 };
   }
@@ -985,8 +991,9 @@ export class Player {
         const dzTop = this.container.y - grabOffset;
         const prevDzTop = prevY - grabOffset;
         const cx = this.container.x;
-        // wider x margin for platform-jump so the player doesn't need pixel-perfect positioning
-        const grabMarginX = isLongJump ? 0 : 64;
+        // some x margin for platform-jump so the player doesn't need pixel-perfect
+        // positioning — matches the airborne detection zone's own half-width
+        const grabMarginX = isLongJump ? 0 : AIRBORNE_DETECTION_HALF_W;
         for (const p of this.platforms) {
           const xOverlap =
             cx + grabMarginX > p.x && cx - grabMarginX < p.x + p.w;
