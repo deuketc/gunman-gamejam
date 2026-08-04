@@ -1,4 +1,11 @@
-import { AnimatedSprite, Assets, Container, Graphics, Rectangle, Texture } from "pixi.js";
+import {
+  AnimatedSprite,
+  Assets,
+  Container,
+  Graphics,
+  Rectangle,
+  Texture,
+} from "pixi.js";
 import type { EnemyBase, PendingShot, Rect } from "./EnemyBase";
 import { Sfx } from "../../audio/Sfx";
 
@@ -130,6 +137,7 @@ export const ENEMY_V1: EnemyStaticConfig = {
   barrelOffsetY: -100,
   shootDelay: 60,
   hitPoints: 3,
+  alertDistance: 400, // 100% wider than the default 200
   laserColor: 0xcc0000,
   laserCoreColor: 0xff8888,
   laserSound: "laser",
@@ -177,6 +185,7 @@ export const ENEMY_V2: EnemyStaticConfig = {
   shootDelay: 90,
   hitPoints: 2,
   deathYOffset: 0,
+  alertDistance: 400, // 100% wider than the default 200
   stumblePath: "/assets/hood-ani-stumble.png",
   stumbleFrameCount: 9,
   stumbleFrameW: 128,
@@ -498,6 +507,12 @@ export class EnemyStatic implements EnemyBase {
         if (this.pendingDeath) {
           this.pendingDeath = false;
           this.setState("dying");
+        } else if (this.enraged) {
+          // Skip patrol entirely — resumePatrol() would pick a walk direction
+          // from patrol geometry and force-face that way, undoing the
+          // face-the-player flip from hit() and pointing the (now-doubled)
+          // detection zone away from the player that just shot it.
+          this.setState("alert");
         } else {
           this.resumePatrol();
         }
@@ -525,7 +540,12 @@ export class EnemyStatic implements EnemyBase {
     if (ratio <= 0) return;
     const color = ratio > 0.5 ? 0x00cc44 : ratio > 0.25 ? 0xffaa00 : 0xcc0000;
     this.healthBarFill
-      .rect(-HEALTH_BAR_WIDTH / 2, barY, HEALTH_BAR_WIDTH * ratio, HEALTH_BAR_HEIGHT)
+      .rect(
+        -HEALTH_BAR_WIDTH / 2,
+        barY,
+        HEALTH_BAR_WIDTH * ratio,
+        HEALTH_BAR_HEIGHT,
+      )
       .fill(color);
   }
 
@@ -757,24 +777,22 @@ export class EnemyStatic implements EnemyBase {
   }
 
   detectionZone(): Rect {
-    if (this.enraged) {
-      return { x: -2000, y: -2000, w: 4000, h: 4000 };
-    }
     const x = this.container.x;
     const y = this.container.y;
     const nearEdge = this.frameW / 2 - 30;
+    const distance = this.enraged ? this.alertDistance * 2 : this.alertDistance;
     if (this.facingLeft) {
       return {
-        x: x - nearEdge - this.alertDistance,
+        x: x - nearEdge - distance,
         y: y - this.frameH,
-        w: this.alertDistance,
+        w: distance,
         h: this.frameH,
       };
     }
     return {
       x: x + nearEdge,
       y: y - this.frameH,
-      w: this.alertDistance,
+      w: distance,
       h: this.frameH,
     };
   }

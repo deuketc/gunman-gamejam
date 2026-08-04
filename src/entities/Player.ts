@@ -880,7 +880,24 @@ export class Player {
   }
 
   update(_dt: number) {
-    if (this.dead || this.won) return;
+    if (this.won) return;
+
+    // Died mid-air — keep falling (no input, no animation change) until the
+    // corpse settles on the nearest floor/platform below it.
+    if (this.dead) {
+      if (!this.isGrounded) {
+        this.velocityY += GRAVITY;
+        const prevY = this.container.y;
+        this.container.y += this.velocityY;
+        const floor = this.effectiveFloor(this.container.x, prevY);
+        if (this.container.y >= floor) {
+          this.container.y = floor;
+          this.velocityY = 0;
+          this.isGrounded = true;
+        }
+      }
+      return;
+    }
 
     const left = Input.isAnyDown("ArrowLeft", "KeyA");
     const right = Input.isAnyDown("ArrowRight", "KeyD");
