@@ -107,7 +107,7 @@ export class GameScene {
     this.enemies.push(enemy2);
     this.container.addChild(enemy2.container);
 
-    const enemy3 = new EnemyStatic(350, groundY - 460, ENEMY_V3);
+    const enemy3 = new EnemyStatic(330, groundY - 460, ENEMY_V3);
     this.enemies.push(enemy3);
     this.container.addChild(enemy3.container);
 
