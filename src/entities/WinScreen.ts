@@ -36,6 +36,7 @@ function checklistLine(label: string, achieved: boolean): string {
 // with the current win state and achievement flags.
 export class WinScreen {
   readonly container: Container;
+  onReveal?: (achievements: Achievements) => void;
   private overlay: Graphics;
   private title: Text;
   private medalLine: Text;
@@ -143,6 +144,7 @@ export class WinScreen {
         this.restart.visible = true;
         this.danceSprite.visible = allDone;
         this.phase = "done";
+        this.onReveal?.(achievements);
       }
     }
   }

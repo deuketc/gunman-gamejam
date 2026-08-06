@@ -27,6 +27,7 @@ import { DeathScreen } from "../entities/DeathScreen";
 import { WinScreen } from "../entities/WinScreen";
 import { BackgroundSprite } from "../entities/BackgroundSprite";
 import { Rain } from "../entities/Rain";
+import { trackEvent } from "../analytics";
 
 function pointInRect(px: number, py: number, r: Rect): boolean {
   return px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h;
@@ -213,6 +214,12 @@ export class GameScene {
 
     // Win screen — same layer as the death screen (mutually exclusive)
     this.winScreen = new WinScreen(this.screenW, this.screenH);
+    this.winScreen.onReveal = (achievements) => {
+      trackEvent("game_complete");
+      if (achievements.medal && achievements.grenade && achievements.enemiesDown) {
+        trackEvent("game_mastery");
+      }
+    };
     this.container.addChild(this.winScreen.container);
   }
 

@@ -6,6 +6,11 @@ import { MusicPlayer } from "./audio/MusicPlayer";
 import { Sfx } from "./audio/Sfx";
 import { Preloader } from "./Preloader";
 import { StartScreen } from "./StartScreen";
+import { trackEvent } from "./analytics";
+
+// gtag's own config call already logs an automatic page_view, but this fires
+// a clearly-named event alongside it for easy filtering in GA4 reports.
+trackEvent("landing");
 
 const TEXTURE_URLS = [
   "/assets/background_01_720.png",
@@ -143,6 +148,7 @@ async function main() {
   await new Promise<void>((resolve) => {
     const startScreen = new StartScreen(app.screen.width, app.screen.height);
     startScreen.onStart = () => {
+      trackEvent("game_start");
       app.stage.removeChild(startScreen.container);
       resolve();
     };
